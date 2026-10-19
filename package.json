@@ -1,0 +1,49 @@
+{
+  "name": "vercel-nextjs-starter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A Next.js SaaS starter that sends Customer.io events and a welcome email on signup.",
+  "license": "MIT",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "screenshots": "node scripts/screenshots.mjs"
+  },
+  "dependencies": {
+    "customerio-node": "5.2.0",
+    "next": "16.4.2",
+    "next-auth": "5.0.0-beta.32",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.4.2",
+    "prettier": "3.9.10",
+    "prettier-plugin-tailwindcss": "0.8.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "6.0.3",
+    "vitest": "5.0.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp",
+      "unrs-resolver"
+    ]
+  }
+}

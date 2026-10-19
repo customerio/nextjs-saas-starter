@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+/*
+ * Colors come from the Customer.io palette: forest ink, a pale green paper,
+ * and lime as the one highlight. Dark mode keeps the forest as the canvas.
+ */
+:root {
+  --canvas: #f3f6f4;
+  --surface: #ffffff;
+  --sunken: #e9efec;
+  --ink: #0b353b;
+  --muted: #4b6366;
+  --faint: #566e71;
+  --line: rgb(11 53 59 / 0.11);
+  --line-strong: rgb(11 53 59 / 0.2);
+  --primary: #0b353b;
+  --primary-hover: #0e464d;
+  --on-primary: #ffffff;
+  --highlight: #b8ff99;
+  --on-highlight: #0b353b;
+  --ok: #0e7a57;
+  --warn: #8a6410;
+  --warn-surface: #fdf6df;
+  --warn-line: rgb(138 100 16 / 0.25);
+  --danger: #b51e1e;
+  --code-ink: #0b353b;
+  --shadow:
+    0 1px 1px rgb(11 53 59 / 0.04), 0 2px 6px -2px rgb(11 53 59 / 0.06),
+    0 12px 32px -12px rgb(11 53 59 / 0.12);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #061f22;
+    --surface: #0a2a2e;
+    --sunken: #05191b;
+    --ink: #e6f2ee;
+    --muted: #9fb8b5;
+    --faint: #86a19e;
+    --line: #143e43;
+    --line-strong: #1d5157;
+    --primary: #b8ff99;
+    --primary-hover: #cbffb3;
+    --on-primary: #08272b;
+    --highlight: #a3e887;
+    --on-highlight: #08272b;
+    --ok: #6fdcaf;
+    --warn: #f2cf73;
+    --warn-surface: #1f2a17;
+    --warn-line: #3b4a22;
+    --danger: #ff8b8b;
+    --code-ink: #d9efe6;
+    --shadow: 0 0 0 1px #0f353a, 0 12px 32px -12px rgb(0 0 0 / 0.5);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-highlight: var(--highlight);
+  --color-on-highlight: var(--on-highlight);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-warn-surface: var(--warn-surface);
+  --color-warn-line: var(--warn-line);
+  --color-danger: var(--danger);
+  --color-code-ink: var(--code-ink);
+  --shadow-card: var(--shadow);
+
+  /* Type scale. Display sizes use the condensed width of Bricolage. */
+  --text-display: clamp(2.5rem, 1.6rem + 3.6vw, 4.25rem);
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.025em;
+  --text-title: clamp(1.75rem, 1.4rem + 1.4vw, 2.25rem);
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: -0.015em;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--highlight) 70%, transparent);
+    color: var(--on-highlight);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  a,
+  button,
+  input,
+  label {
+    touch-action: manipulation;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility font-display-wide {
+  font-family: var(--font-display);
+  font-stretch: 88%;
+  font-optical-sizing: auto;
+}
