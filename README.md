@@ -136,7 +136,7 @@ A new workspace has to pass three checks before Customer.io sends email for it. 
 
 1. **Confirm the account owner's email.** Click the link Customer.io sent when you created the account.
 2. **Get the account approved for sending.** Customer.io reviews new accounts. Fill in your account details in [Customer.io](https://fly.customer.io) to start.
-3. **Verify a sending domain.** Add the DNS records Customer.io gives you, then set `CUSTOMERIO_FROM_EMAIL` to an address on that domain. See [sending domains](https://customer.io/docs/journeys/authentication/).
+3. **Verify a sending domain.** Add the DNS records Customer.io gives you, then set `CUSTOMERIO_FROM_EMAIL` to an address on that domain. See [sending domains](https://docs.customer.io/messaging/channels/email/deliverability/authentication/).
 
 After that, click **Send the welcome email again** on the dashboard.
 
