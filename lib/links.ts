@@ -14,8 +14,7 @@ export const links = {
   githubOAuthApp: "https://github.com/settings/applications/new",
 };
 
-/** The workspace in the Customer.io app. EU workspaces live on a separate host. */
-export function workspaceUrl(workspaceId: string, region: "us" | "eu"): string {
-  const host = region === "eu" ? "https://fly-eu.customer.io" : "https://fly.customer.io";
-  return `${host}/workspaces/${encodeURIComponent(workspaceId)}`;
+/** The workspace in the Customer.io app. One host serves both US and EU workspaces. */
+export function workspaceUrl(workspaceId: string): string {
+  return `${links.app}/workspaces/${encodeURIComponent(workspaceId)}`;
 }

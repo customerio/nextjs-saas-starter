@@ -44,7 +44,7 @@ export function ConnectionPanel({ config }: { config: CustomerioConfig }) {
         <dd className="min-w-0 text-end">
           {config.workspaceId ? (
             <a
-              href={workspaceUrl(config.workspaceId, config.region)}
+              href={workspaceUrl(config.workspaceId)}
               className="font-mono tabular-nums underline decoration-line-strong underline-offset-4 hover:decoration-ink"
             >
               {config.workspaceId}
