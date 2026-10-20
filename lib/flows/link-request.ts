@@ -39,6 +39,25 @@ export function deliveryOf(result: StepResult): LinkDelivery {
  * Previews are behind Vercel Authentication by default, so only your team can
  * open them. Local dev prints the link to the terminal instead.
  */
+/** The prefix of the owner's sign-in link in the server log. README and tests match on it. */
+export const OWNER_LINK_LOG_PREFIX =
+  "[acme] Owner sign-in link (shown because email isn't set up yet):";
+
+/**
+ * Whether to write this link to the server log (Vercel > Project > Logs).
+ * Only for the owner's own email, only while email can't go out, and only
+ * off local dev (local dev prints every link anyway). Once a send works,
+ * this stops: the owner gets the email like everyone else.
+ */
+export function shouldLogOwnerLink(
+  deps: Pick<FlowDeps, "isDev" | "config">,
+  email: string,
+  delivery: LinkDelivery,
+): boolean {
+  if (deps.isDev || delivery === "sent") return false;
+  return deps.config.ownerEmail !== null && deps.config.ownerEmail === email;
+}
+
 export function mayRevealLink(
   deps: Pick<FlowDeps, "vercelEnv" | "config">,
   email: string,
@@ -89,6 +108,9 @@ export async function handleLinkRequest(
   }
   if (deps.isDev) {
     deps.log.info(`\n[auth] Sign-in link for ${input.email} (dev only):\n${input.url}\n`);
+  } else if (shouldLogOwnerLink(deps, input.email, delivery)) {
+    // The owner's way in on a fresh deploy, before email works. Never for anyone else.
+    deps.log.warn(`${OWNER_LINK_LOG_PREFIX} ${input.url}`);
   }
 
   if (!user.emailVerified) {

@@ -5,7 +5,7 @@ import type { Db } from "@/lib/db/store";
 import { edgeError, FULL_ENV, fakeDeps, NOT_APPROVED } from "@/tests/fakes";
 import { setupTestDb } from "@/tests/db";
 
-import { handleLinkRequest } from "./link-request";
+import { handleLinkRequest, OWNER_LINK_LOG_PREFIX } from "./link-request";
 import { handleSignIn } from "./signup";
 
 const URL = "https://acme.test/api/auth/callback/email?token=abc&email=ada%40example.com";
@@ -165,5 +165,63 @@ describe("showing the link before email works", () => {
     app.sendEmail.mockRejectedValue(edgeError(403, NOT_APPROVED));
     expect((await handleLinkRequest(deps, request("someone@example.com"))).revealedUrl).toBeNull();
     expect((await handleLinkRequest(deps, request("owner@acme.test"))).revealedUrl).toBe(URL);
+  });
+});
+
+describe("the owner's sign-in link in the server log", () => {
+  const ownerEnv = { ...FULL_ENV, CUSTOMERIO_OWNER_EMAIL: "Owner@Acme.test" };
+  const logged = (deps: { log: { warn: unknown; info: unknown } }) =>
+    [
+      ...(deps.log.warn as { mock: { calls: unknown[][] } }).mock.calls,
+      ...(deps.log.info as { mock: { calls: unknown[][] } }).mock.calls,
+    ]
+      .flat()
+      .map(String)
+      .filter((line) => line.includes(URL));
+
+  it("logs it for the owner while email can't go out (Production)", async () => {
+    const { deps, app } = fakeDeps(db, ownerEnv, { vercelEnv: "production" });
+    app.sendEmail.mockRejectedValueOnce(edgeError(403, NOT_APPROVED));
+    await handleLinkRequest(deps, request("owner@acme.test"));
+    expect(logged(deps)).toEqual([`${OWNER_LINK_LOG_PREFIX} ${URL}`]);
+  });
+
+  it("logs it when there is no App API key at all", async () => {
+    const env = { CUSTOMERIO_OWNER_EMAIL: "owner@acme.test" };
+    const { deps } = fakeDeps(db, env, { vercelEnv: "production" });
+    await handleLinkRequest(deps, request("owner@acme.test"));
+    expect(logged(deps)).toHaveLength(1);
+  });
+
+  it("never logs a link for anyone else", async () => {
+    const { deps, app } = fakeDeps(db, ownerEnv, { vercelEnv: "production" });
+    app.sendEmail.mockRejectedValue(edgeError(403, NOT_APPROVED));
+    await handleLinkRequest(deps, request("someone@example.com"));
+    expect(logged(deps)).toEqual([]);
+  });
+
+  it("stops once email sends fine", async () => {
+    const { deps } = fakeDeps(db, ownerEnv, { vercelEnv: "production" });
+    await handleLinkRequest(deps, request("owner@acme.test"));
+    expect(logged(deps)).toEqual([]);
+  });
+
+  it("prefers OWNER_EMAIL over CUSTOMERIO_OWNER_EMAIL", async () => {
+    const env = { ...ownerEnv, OWNER_EMAIL: "me@acme.test" };
+    const { deps, app } = fakeDeps(db, env, { vercelEnv: "production" });
+    app.sendEmail.mockRejectedValue(edgeError(403, NOT_APPROVED));
+    await handleLinkRequest(deps, request("owner@acme.test"));
+    expect(logged(deps)).toEqual([]);
+    await handleLinkRequest(deps, request("me@acme.test"));
+    expect(logged(deps)).toHaveLength(1);
+  });
+
+  it("leaves local dev as it was: every link, with the dev prefix, never the owner prefix", async () => {
+    const { deps } = fakeDeps(db, {}, { isDev: true, vercelEnv: null });
+    await handleLinkRequest(deps, request("someone@example.com"));
+    const lines = logged(deps);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("(dev only)");
+    expect(lines[0]).not.toContain(OWNER_LINK_LOG_PREFIX);
   });
 });

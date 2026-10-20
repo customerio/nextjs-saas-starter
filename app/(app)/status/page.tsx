@@ -38,7 +38,9 @@ export default async function StatusPage() {
         <h1 className="text-title font-semibold">Status</h1>
         <p className="mt-3 text-muted">
           This page is only for the owner. Set <code className="text-ink">OWNER_EMAIL</code> to your
-          email in the Vercel project, redeploy, and sign in with that address.
+          email in the Vercel project (or reconnect the Customer.io integration, which writes{" "}
+          <code className="text-ink">CUSTOMERIO_OWNER_EMAIL</code>), redeploy, and sign in with that
+          address.
         </p>
       </div>
     );
@@ -62,6 +64,16 @@ export default async function StatusPage() {
       term: "Browser SDK",
       value: sdk.enabled ? <SdkLiveStatus /> : <span className="text-faint">Off</span>,
     },
+    {
+      term: "Owner",
+      value: config.ownerEmail ? (
+        <span className="break-all" title={`From ${config.ownerEmailSource}`}>
+          {config.ownerEmail}
+        </span>
+      ) : (
+        <span className="text-faint">Not set (local dev)</span>
+      ),
+    },
     { term: "Region", value: config.region === "eu" ? "EU" : "US" },
     {
       term: "Workspace",
@@ -82,7 +94,7 @@ export default async function StatusPage() {
         Only you can see this page. It shows which values are set, never the values.
       </p>
 
-      <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
+      <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-5">
         {summary.map((item) => (
           <div key={item.term}>
             <dt className="text-sm text-muted">{item.term}</dt>

@@ -33,10 +33,19 @@ The app is called **Acme**. That is a placeholder name and logo. Change them in 
    ```
 
 4. Vercel builds the app. The build creates the database tables first.
-5. In the Vercel project, add **`OWNER_EMAIL`** with your own email, and redeploy. Only that person can open the status page.
-6. Open your site and sign in with that email.
+5. Open your site and sign in with the email of your Vercel account. That person is the **owner**: the Customer.io integration writes their email as `CUSTOMERIO_OWNER_EMAIL`. To pick someone else, set `OWNER_EMAIL`.
 
-A brand-new Customer.io workspace can't send email yet, so your first sign-in link will not arrive. That is normal. To get in anyway, open a **Preview** deployment, where the link shows on the page, or run the app locally. Then open `/status` to see what is left to do. See [Email readiness](#email-readiness).
+A brand-new Customer.io workspace can't send email yet, so your first sign-in link will not arrive by email. That is normal: see the next section.
+
+## First sign-in after deploying
+
+1. Open your new site and go to **Sign in**.
+2. Type the email of your Vercel account (the owner) and continue.
+3. In Vercel, open your project → **Logs**. Find the line that starts with `[acme] Owner sign-in link (shown because email isn't set up yet):`.
+4. Open that link in the same browser. You're signed in.
+5. Open **`/status`**. It shows what is left before email can send (see [Email readiness](#email-readiness)).
+
+The link is written to the log only for the owner's email, and only while email can't go out. Links for anyone else are never logged. Once email works, the owner gets the link by email like everyone else. Links expire after 15 minutes and work once.
 
 ## How it works
 
@@ -53,7 +62,7 @@ They open the link: that is the signup (only once per person, enforced in Postgr
   ├─ identify (email_verified: true, created_at)
   ├─ event signed_up
   ├─ welcome email
-  └─ a note to OWNER_EMAIL, if you set it
+  └─ a note to the owner, if there is one
 
 In the browser (when CUSTOMERIO_CDP_WRITE_KEY is set)
   ├─ page view on every route change
@@ -89,21 +98,22 @@ The code is small. Start here:
 
 ## Environment variables
 
-| Variable                           | Written by               | Needed                | What it is for                                                                                 |
-| ---------------------------------- | ------------------------ | --------------------- | ---------------------------------------------------------------------------------------------- |
-| `AUTH_SECRET`                      | You (Deploy Button asks) | Yes                   | Signs Auth.js cookies and hashes link tokens.                                                  |
-| `DATABASE_URL`                     | Neon                     | Yes                   | Pooled Postgres URL the app uses.                                                              |
-| `DATABASE_URL_UNPOOLED`            | Neon                     | Yes, for builds       | Direct Postgres URL for migrations.                                                            |
-| `CUSTOMERIO_SITE_ID`               | Customer.io              | For people and events | Track API site ID. The browser also uses it for in-app messages.                               |
-| `CUSTOMERIO_TRACK_API_KEY`         | Customer.io              | For people and events | Track API key. Server only.                                                                    |
-| `CUSTOMERIO_APP_API_KEY`           | Customer.io              | For email             | App API key, send only. Production and Preview only.                                           |
-| `CUSTOMERIO_WORKSPACE_ID`          | Customer.io              | No                    | Links the status page to your workspace.                                                       |
-| `CUSTOMERIO_REGION`                | Customer.io              | Yes                   | `us` or `eu`. Picks the API hosts.                                                             |
-| `CUSTOMERIO_CDP_WRITE_KEY`         | Customer.io              | For the browser SDK   | Public by design. US workspaces only for now.                                                  |
-| `CUSTOMERIO_FROM_EMAIL`            | You                      | No                    | Sender address. Without it, Customer.io uses your verified domain's default sender.            |
-| `OWNER_EMAIL`                      | You                      | Yes, for `/status`    | The owner: the only person who can open the status page. Also gets a note for each new signup. |
-| `CUSTOMERIO_MAGIC_LINK_MESSAGE_ID` | You                      | No                    | Send a sign-in email you designed in Customer.io instead of the built-in one.                  |
-| `CUSTOMERIO_WELCOME_MESSAGE_ID`    | You                      | No                    | Send a welcome email you designed in Customer.io instead of the built-in one.                  |
+| Variable                           | Written by               | Needed                | What it is for                                                                                                 |
+| ---------------------------------- | ------------------------ | --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`                      | You (Deploy Button asks) | Yes                   | Signs Auth.js cookies and hashes link tokens.                                                                  |
+| `DATABASE_URL`                     | Neon                     | Yes                   | Pooled Postgres URL the app uses.                                                                              |
+| `DATABASE_URL_UNPOOLED`            | Neon                     | Yes, for builds       | Direct Postgres URL for migrations.                                                                            |
+| `CUSTOMERIO_SITE_ID`               | Customer.io              | For people and events | Track API site ID. The browser also uses it for in-app messages.                                               |
+| `CUSTOMERIO_TRACK_API_KEY`         | Customer.io              | For people and events | Track API key. Server only.                                                                                    |
+| `CUSTOMERIO_APP_API_KEY`           | Customer.io              | For email             | App API key, send only. Production and Preview only.                                                           |
+| `CUSTOMERIO_WORKSPACE_ID`          | Customer.io              | No                    | Links the status page to your workspace.                                                                       |
+| `CUSTOMERIO_REGION`                | Customer.io              | Yes                   | `us` or `eu`. Picks the API hosts.                                                                             |
+| `CUSTOMERIO_CDP_WRITE_KEY`         | Customer.io              | For the browser SDK   | Public by design. US workspaces only for now.                                                                  |
+| `CUSTOMERIO_FROM_EMAIL`            | You                      | No                    | Sender address. Without it, Customer.io uses your verified domain's default sender.                            |
+| `CUSTOMERIO_OWNER_EMAIL`           | Customer.io              | For `/status`         | The email of the Vercel user who installed the integration. The owner, unless `OWNER_EMAIL` is set.            |
+| `OWNER_EMAIL`                      | You                      | No                    | Overrides the owner. The owner is the only person who can open `/status`, and gets a note for each new signup. |
+| `CUSTOMERIO_MAGIC_LINK_MESSAGE_ID` | You                      | No                    | Send a sign-in email you designed in Customer.io instead of the built-in one.                                  |
+| `CUSTOMERIO_WELCOME_MESSAGE_ID`    | You                      | No                    | Send a welcome email you designed in Customer.io instead of the built-in one.                                  |
 
 Neon also writes `POSTGRES_URL` and `POSTGRES_URL_NON_POOLING`. The app accepts them if the `DATABASE_URL*` names are missing.
 
@@ -111,7 +121,7 @@ Every variable is explained in [`.env.example`](.env.example). The **status page
 
 ## The status page
 
-`/status` is for the owner: the signed-in person whose email is `OWNER_EMAIL`. Everyone else gets a 404. Without `OWNER_EMAIL`, local dev lets any signed-in person in; a deployed site shows a short note asking you to set it.
+`/status` is for the owner: the signed-in person whose email is `OWNER_EMAIL`, or `CUSTOMERIO_OWNER_EMAIL` when that is not set. Everyone else gets a 404. With neither, local dev lets any signed-in person in; a deployed site shows a short note asking you to set one.
 
 It shows email readiness with the setup checklist and **Check again**, whether the browser SDK loaded, what was sent to Customer.io when you signed up, and which variables are set.
 
@@ -128,15 +138,15 @@ The app never asks Customer.io about this directly. Every email it sends is also
 - Visitors see one calm line on the sign-in form ("Sign-in emails aren't on yet. Try again soon."). No setup details are ever shown to them.
 - People can still ask for a link. They are saved, and Customer.io gets `signup_started`. The page tells them their email is saved and to try again soon.
 - The status page shows you the checklist, with the open step marked.
-- **You can still get in.** In local dev, the link prints in your terminal. On a Vercel **Preview** deployment, the link shows on the page with a "Preview only" label (only for `OWNER_EMAIL`, if you set it). Production never shows it. Previews are behind Vercel Authentication by default.
+- **The owner can still get in.** On any Vercel deployment, the owner's link goes to the Vercel logs (see [First sign-in after deploying](#first-sign-in-after-deploying)); the sign-in page shows a quiet "Own this site?" line pointing there, the same for every visitor. In local dev, every link prints in your terminal. On a **Preview** deployment, the link also shows on the page with a "Preview only" label (only for the owner, if there is one). Production never shows a link on the page.
 
-**Check again** (on the status page, owner only) sends one short test email to `OWNER_EMAIL` and stores the answer. While email is blocked, nothing arrives. The first time it works, you get one "Email works" note and the checklist goes away. It waits 30 seconds between checks.
+**Check again** (on the status page, owner only) sends one short test email to the owner and stores the answer. While email is blocked, nothing arrives. The first time it works, you get one "Email works" note and the checklist goes away. It waits 30 seconds between checks.
 
 Once any send works, the state flips to ready by itself. Emails that failed before that (like your own welcome email) are not sent again; the status page shows them as "Not sent".
 
 ## Get told about each signup
 
-With `OWNER_EMAIL` set, the app emails you when someone confirms their email ("Acme has its first signup", then "New signup on Acme"). It skips your own signup.
+With an owner set (`CUSTOMERIO_OWNER_EMAIL` or `OWNER_EMAIL`), the app emails you when someone confirms their email ("Acme has its first signup", then "New signup on Acme"). It skips your own signup.
 
 For more than that, use the `signed_up` event instead: in Customer.io, make a [campaign](https://docs.customer.io/messaging/send/automations/overview/) that starts when a person performs `signed_up`, and send yourself an email from it. You can add a welcome series for the person in the same campaign, with no code change.
 

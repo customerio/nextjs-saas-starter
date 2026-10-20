@@ -91,6 +91,20 @@ describe("new optional variables", () => {
     expect(config.problems[0]?.variable).toBe("OWNER_EMAIL");
   });
 
+  it("uses CUSTOMERIO_OWNER_EMAIL as the owner unless OWNER_EMAIL is set", () => {
+    expect(readCustomerioConfig({ CUSTOMERIO_OWNER_EMAIL: "Vercel@Acme.test" })).toMatchObject({
+      ownerEmail: "vercel@acme.test",
+      ownerEmailSource: "CUSTOMERIO_OWNER_EMAIL",
+    });
+    expect(
+      readCustomerioConfig({
+        CUSTOMERIO_OWNER_EMAIL: "vercel@acme.test",
+        OWNER_EMAIL: "me@acme.test",
+      }),
+    ).toMatchObject({ ownerEmail: "me@acme.test", ownerEmailSource: "OWNER_EMAIL" });
+    expect(readCustomerioConfig({}).ownerEmail).toBeNull();
+  });
+
   it("reads the two message IDs", () => {
     expect(
       readCustomerioConfig({

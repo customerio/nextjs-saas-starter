@@ -28,6 +28,7 @@ export type EnvVarName =
   | "AUTH_SECRET"
   | "CUSTOMERIO_FROM_EMAIL"
   | "OWNER_EMAIL"
+  | "CUSTOMERIO_OWNER_EMAIL"
   | "CUSTOMERIO_MAGIC_LINK_MESSAGE_ID"
   | "CUSTOMERIO_WELCOME_MESSAGE_ID";
 
@@ -117,11 +118,20 @@ export const ENV_VARS: readonly EnvVarInfo[] = [
     purpose: "Sender address. Without it, Customer.io uses your verified domain's default.",
   },
   {
+    name: "CUSTOMERIO_OWNER_EMAIL",
+    setBy: "customerio",
+    secret: false,
+    optional: true,
+    purpose:
+      "The email of the Vercel user who installed the integration. The owner, unless OWNER_EMAIL is set.",
+  },
+  {
     name: "OWNER_EMAIL",
     setBy: "you",
     secret: false,
     optional: true,
-    purpose: "Gets an email for each new signup, and the \u201cCheck again\u201d test email.",
+    purpose:
+      "The owner: opens /status, gets a note for each signup. Overrides CUSTOMERIO_OWNER_EMAIL.",
   },
   {
     name: "CUSTOMERIO_MAGIC_LINK_MESSAGE_ID",
@@ -158,7 +168,10 @@ export interface CustomerioConfig {
   /** The site ID on its own. The browser needs it for in-app messages. */
   siteId: string | null;
   fromEmail: string | null;
+  /** OWNER_EMAIL, else CUSTOMERIO_OWNER_EMAIL. Lowercase. */
   ownerEmail: string | null;
+  /** Which variable the owner came from, for the status page. */
+  ownerEmailSource: "OWNER_EMAIL" | "CUSTOMERIO_OWNER_EMAIL" | null;
   magicLinkMessageId: string | null;
   welcomeMessageId: string | null;
   /** Values that are set but wrong. Missing values are not problems. */
@@ -210,14 +223,27 @@ export function readCustomerioConfig(env: Env = process.env): CustomerioConfig {
     fromEmail = null;
   }
 
-  let ownerEmail = read(env, "OWNER_EMAIL")?.toLowerCase() ?? null;
-  if (ownerEmail && !PLAIN_EMAIL.test(ownerEmail)) {
-    problems.push({
-      variable: "OWNER_EMAIL",
-      message: "This is not an email address. Use a plain address like you@example.com.",
-    });
-    ownerEmail = null;
-  }
+  // The owner: OWNER_EMAIL if you set it, else the email the Customer.io
+  // integration writes for the Vercel user who installed it.
+  const ownerFrom = (variable: "OWNER_EMAIL" | "CUSTOMERIO_OWNER_EMAIL") => {
+    const value = read(env, variable)?.toLowerCase() ?? null;
+    if (value && !PLAIN_EMAIL.test(value)) {
+      problems.push({
+        variable,
+        message: "This is not an email address. Use a plain address like you@example.com.",
+      });
+      return null;
+    }
+    return value;
+  };
+  const explicitOwner = ownerFrom("OWNER_EMAIL");
+  const integrationOwner = ownerFrom("CUSTOMERIO_OWNER_EMAIL");
+  const ownerEmail = explicitOwner ?? integrationOwner;
+  const ownerEmailSource = explicitOwner
+    ? "OWNER_EMAIL"
+    : integrationOwner
+      ? "CUSTOMERIO_OWNER_EMAIL"
+      : null;
 
   // With a broken region we cannot know which hosts hold the data, so we send
   // nothing rather than guess.
@@ -231,6 +257,7 @@ export function readCustomerioConfig(env: Env = process.env): CustomerioConfig {
     siteId: regionValid ? siteId : null,
     fromEmail,
     ownerEmail,
+    ownerEmailSource,
     magicLinkMessageId: read(env, "CUSTOMERIO_MAGIC_LINK_MESSAGE_ID"),
     welcomeMessageId: read(env, "CUSTOMERIO_WELCOME_MESSAGE_ID"),
     problems,

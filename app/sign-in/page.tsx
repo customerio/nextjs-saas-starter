@@ -5,6 +5,7 @@ import { AuthShell } from "@/components/site-chrome";
 import { visitorNotice } from "@/lib/flows/owner";
 import { loadReadiness } from "@/lib/readiness-server";
 import { getSession } from "@/lib/session";
+import { site } from "@/lib/site";
 
 import { LinkForm } from "./link-form";
 
@@ -24,7 +25,12 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
   const { error } = await searchParams;
   const message =
     typeof error === "string" ? (ERRORS[error] ?? "Sign-in didn’t work. Try again.") : null;
-  const notice = visitorNotice(await loadReadiness(), process.env.NODE_ENV === "development");
+  const isDev = process.env.NODE_ENV === "development";
+  const readiness = await loadReadiness();
+  const notice = visitorNotice(readiness, isDev);
+  // Only while email can't go out, and the same for every visitor: it never
+  // says whether a typed email is the owner's.
+  const showOwnerHint = !isDev && (readiness.kind === "blocked" || readiness.kind === "no_app_key");
 
   return (
     <AuthShell>
@@ -49,6 +55,17 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
 
       <div className="mt-8">
         <LinkForm autoFocus notice={notice} />
+        {showOwnerHint ? (
+          <p className="mt-1 ps-3.5 text-sm leading-5 text-faint">
+            Own this site? Your sign-in link is in your Vercel logs.{" "}
+            <a
+              href={`${site.repoUrl}#first-sign-in-after-deploying`}
+              className="-my-3 inline-flex min-h-11 items-center link"
+            >
+              See how
+            </a>
+          </p>
+        ) : null}
       </div>
     </AuthShell>
   );
