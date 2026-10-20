@@ -1,4 +1,5 @@
 import type { Readiness } from "@/lib/customerio/readiness";
+import type { LinkDelivery } from "@/lib/flows/link-request";
 
 /**
  * Who may see setup details (the status page, the email checklist, "Check
@@ -34,4 +35,13 @@ export function visitorNotice(readiness: Readiness, isDev: boolean): string | nu
       : "Sign-in emails aren’t on yet. Try again soon.";
   }
   return null;
+}
+
+/**
+ * Whether "Check your email" points to the Vercel logs. The owner's link is
+ * logged whenever a send fails, so this follows the delivery, not the email:
+ * like the sign-in page, it never says whether the address is the owner's.
+ */
+export function showsOwnerLogsHint(delivery: LinkDelivery | undefined, isDev: boolean): boolean {
+  return !isDev && delivery !== undefined && delivery !== "sent";
 }

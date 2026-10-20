@@ -3,12 +3,14 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { buttonClass } from "@/components/button";
+import { OwnerLogsHint } from "@/components/owner-logs-hint";
 import { AuthShell } from "@/components/site-chrome";
 import {
   LINK_COOKIE,
   parseLinkRequestCookie,
   type LinkRequestNote,
 } from "@/lib/flows/link-request-cookie";
+import { showsOwnerLogsHint } from "@/lib/flows/owner";
 
 export const metadata: Metadata = { title: "Check your email" };
 
@@ -52,7 +54,8 @@ function copyFor(note: LinkRequestNote | null, isDev: boolean) {
 
 export default async function CheckEmailPage() {
   const note = parseLinkRequestCookie((await cookies()).get(LINK_COOKIE)?.value);
-  const { title, body } = copyFor(note, process.env.NODE_ENV === "development");
+  const isDev = process.env.NODE_ENV === "development";
+  const { title, body } = copyFor(note, isDev);
 
   return (
     <AuthShell>
@@ -60,6 +63,7 @@ export default async function CheckEmailPage() {
         {title}
       </h1>
       <p className="mt-2 text-muted">{body}</p>
+      {showsOwnerLogsHint(note?.delivery, isDev) ? <OwnerLogsHint className="mt-4" /> : null}
 
       {note?.revealedUrl ? (
         <section

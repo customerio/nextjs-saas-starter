@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { OwnerLogsHint } from "@/components/owner-logs-hint";
 import { AuthShell } from "@/components/site-chrome";
 import { emailNotWorking } from "@/lib/customerio/readiness";
 import { visitorNotice } from "@/lib/flows/owner";
 import { loadReadiness } from "@/lib/readiness-server";
 import { getSession } from "@/lib/session";
-import { site } from "@/lib/site";
 
 import { LinkForm } from "./link-form";
 
@@ -56,17 +56,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
 
       <div className="mt-8">
         <LinkForm autoFocus notice={notice} />
-        {showOwnerHint ? (
-          <p className="mt-1 ps-3.5 text-sm leading-5 text-faint">
-            Own this site? Your sign-in link is in your Vercel logs.{" "}
-            <a
-              href={`${site.repoUrl}#first-sign-in-after-deploying`}
-              className="-my-3 inline-flex min-h-11 items-center link"
-            >
-              See how
-            </a>
-          </p>
-        ) : null}
+        {showOwnerHint ? <OwnerLogsHint className="mt-1 ps-3.5" /> : null}
       </div>
     </AuthShell>
   );

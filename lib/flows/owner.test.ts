@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ownerAccess, visitorNotice } from "./owner";
+import { ownerAccess, showsOwnerLogsHint, visitorNotice } from "./owner";
 
 describe("ownerAccess", () => {
   it("lets in only the person whose email is OWNER_EMAIL", () => {
@@ -48,5 +48,16 @@ describe("visitorNotice", () => {
   it("points to the terminal in local dev when there is no App API key", () => {
     expect(visitorNotice({ kind: "no_app_key" }, true)).toMatch(/terminal/);
     expect(visitorNotice({ kind: "no_app_key" }, false)).not.toMatch(/terminal/);
+  });
+});
+
+describe("showsOwnerLogsHint", () => {
+  it("points to the logs whenever the link did not go out, off local dev", () => {
+    expect(showsOwnerLogsHint("waiting", false)).toBe(true);
+    expect(showsOwnerLogsHint("not_configured", false)).toBe(true);
+    expect(showsOwnerLogsHint("failed", false)).toBe(true);
+    expect(showsOwnerLogsHint("sent", false)).toBe(false);
+    expect(showsOwnerLogsHint(undefined, false)).toBe(false);
+    expect(showsOwnerLogsHint("waiting", true)).toBe(false);
   });
 });
