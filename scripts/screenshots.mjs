@@ -1,82 +1,145 @@
 /**
- * Takes the README screenshots: every page, light and dark, desktop and phone.
+ * Takes screenshots of every page, light and dark, desktop and phone, by
+ * walking the real flow. It never calls Customer.io:
  *
- * It needs two running servers, so it never calls Customer.io:
+ * - the server must run with the fake (scripts/fake-customerio.mjs) loaded,
+ * - every browser request to Customer.io or Gist is answered by a stub here.
  *
- *   BASE_URL   a server with no CUSTOMERIO_* variables. The script signs in with
- *              the demo form, so every Customer.io step is skipped.
- *   SETUP_URL  optional. A server with placeholder CUSTOMERIO_* values. The
- *              script does not sign in there. It sets a session cookie and a
- *              signup record directly, to show the "Finish setting up email"
- *              state a brand-new workspace sees.
- *   AUTH_SECRET  the SETUP_URL server's secret, used to make the session cookie.
- *   OUT        where to write the PNG files. Default: ./screenshots
+ * It WIPES the app tables in THROWAWAY_DATABASE_URL. Point it at a local
+ * Docker database, never at Neon.
  *
- *   pnpm screenshots
+ *   docker run -d --name acme-shots -e POSTGRES_PASSWORD=acme -p 55432:5432 postgres:17
+ *   export DATABASE_URL=postgres://postgres:acme@localhost:55432/postgres
+ *   export FAKE_CIO_DIR=/tmp/acme-fake-cio  CUSTOMERIO_SITE_ID=x  CUSTOMERIO_TRACK_API_KEY=x \
+ *          CUSTOMERIO_APP_API_KEY=x  CUSTOMERIO_CDP_WRITE_KEY=x  CUSTOMERIO_WORKSPACE_ID=1 \
+ *          AUTH_SECRET=$(openssl rand -base64 33)  AUTH_TRUST_HOST=true
+ *   pnpm build && NODE_OPTIONS="--import ./scripts/fake-customerio.mjs" pnpm start &
+ *   THROWAWAY_DATABASE_URL=$DATABASE_URL OUT=./screenshots pnpm screenshots
  */
+import { readFileSync, writeFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { chromium } from "@playwright/test";
-import { encode } from "next-auth/jwt";
+import pg from "pg";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
-const SETUP_URL = process.env.SETUP_URL;
 const OUT = path.resolve(process.env.OUT ?? "screenshots");
+const FAKE_DIR = process.env.FAKE_CIO_DIR;
+const DB_URL = process.env.THROWAWAY_DATABASE_URL;
+if (!FAKE_DIR || !DB_URL) {
+  console.error(
+    "Set FAKE_CIO_DIR and THROWAWAY_DATABASE_URL. See the comment at the top of this file.",
+  );
+  process.exit(1);
+}
 
 const VIEWPORTS = {
   desktop: { width: 1440, height: 900 },
   mobile: { width: 375, height: 812 },
 };
 
-async function signInWithDemo(page) {
-  await page.goto(`${BASE_URL}/sign-in`);
-  await page.getByLabel("Name").fill("Ada Lovelace");
-  await page.getByLabel("Email").fill("ada@example.com");
-  await page.getByRole("button", { name: "Continue" }).click();
-  await page.waitForURL("**/dashboard");
+const hoursAgo = (hours) => new Date(Date.now() - hours * 3_600_000).toISOString();
+const INBOX = [
+  {
+    queueId: "q-1",
+    deliveryId: "d-1",
+    messageType: "inbox",
+    type: "inbox",
+    priority: 1,
+    topics: [],
+    userToken: "u",
+    sentAt: hoursAgo(0.07),
+    expiry: hoursAgo(-48),
+    opened: false,
+    properties: {
+      title: "Your workspace is ready",
+      body: "Invite a teammate so you can plan your first project together.",
+    },
+  },
+  {
+    queueId: "q-2",
+    deliveryId: "d-2",
+    messageType: "inbox",
+    type: "inbox",
+    priority: 1,
+    topics: [],
+    userToken: "u",
+    sentAt: hoursAgo(26),
+    expiry: hoursAgo(-48),
+    opened: true,
+    properties: {
+      title: "Tip: search from anywhere",
+      body: "Press / on any page to jump to a project, a person, or a setting.",
+    },
+  },
+];
+
+/** Answers the browser SDK's settings, event, and in-app requests locally. */
+async function stubCustomerio(context) {
+  const cors = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-headers": "*",
+    "access-control-allow-methods": "*",
+  };
+  await context.route(
+    (url) => url.hostname.endsWith("customer.io") || url.hostname.endsWith("gist.build"),
+    (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
+      let body = {};
+      if (url.pathname.includes("/settings")) {
+        body = {
+          integrations: {
+            "Customer.io Data Pipelines": {
+              apiKey: "fake",
+              apiHost: "cdp.customer.io/v1",
+              protocol: "https",
+            },
+          },
+        };
+      } else if (url.pathname.startsWith("/api/v4/users")) {
+        body = { inAppMessages: [], inboxMessages: INBOX };
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: cors,
+        body: JSON.stringify(body),
+      });
+    },
+  );
 }
 
-/** The state a new workspace is in: person and event sent, email blocked. */
-async function addSetupCookies(context) {
-  const personId = "demo-6b1c9e0f4a2d8c7e5b31";
-  const sessionToken = await encode({
-    token: { name: "Ada Lovelace", email: "ada@example.com", sub: personId, method: "demo" },
-    secret: process.env.AUTH_SECRET,
-    salt: "authjs.session-token",
-  });
-  const record = {
-    v: 1,
-    personId,
-    region: "us",
-    signedUpAt: new Date().toISOString(),
-    report: {
-      identify: { status: "done", detail: null },
-      event: { status: "done", detail: null },
-      email: {
-        status: "failed",
-        failure: {
-          kind: "account_not_approved",
-          status: 403,
-          message:
-            "Account is not yet approved for sending. Complete your account setup to start sending.",
-        },
-      },
-    },
-  };
-  await context.addCookies([
-    { name: "authjs.session-token", value: sessionToken, url: SETUP_URL, httpOnly: true },
-    { name: "cio-starter-signup", value: JSON.stringify(record), url: SETUP_URL, httpOnly: true },
-  ]);
+const setMode = (mode) => writeFileSync(path.join(FAKE_DIR, "mode"), mode);
+
+/** The sign-in link from the last email the fake received. */
+function lastLink() {
+  const calls = readFileSync(path.join(FAKE_DIR, "calls.jsonl"), "utf8").trim().split("\n");
+  for (const line of calls.reverse()) {
+    const call = JSON.parse(line);
+    if (!call.url.endsWith("/send/email") || !call.body) continue;
+    const body = JSON.parse(call.body);
+    const href =
+      body.message_data?.url ?? body.body?.match(/href="([^"]*\/callback\/email[^"]*)"/)?.[1];
+    if (href) return href.replaceAll("&amp;", "&");
+  }
+  throw new Error("No sign-in link found in the fake's log.");
 }
 
 async function shoot(page, name) {
-  // Let fonts settle so the screenshot matches what people see.
   await page.evaluate(() => document.fonts.ready);
   const file = path.join(OUT, `${name}.png`);
   await page.screenshot({ path: file, fullPage: true });
   console.log(file);
 }
+
+const db = new pg.Client({ connectionString: DB_URL });
+await db.connect();
+await db.query(
+  "truncate users, accounts, sessions, verification_tokens, email_status, rate_limit_hits, signups cascade",
+);
 
 await mkdir(OUT, { recursive: true });
 const browser = await chromium.launch();
@@ -84,33 +147,56 @@ const browser = await chromium.launch();
 for (const scheme of ["light", "dark"]) {
   for (const [device, viewport] of Object.entries(VIEWPORTS)) {
     const suffix = `${device}-${scheme}`;
-    const options = {
+    const context = await browser.newContext({
       viewport,
       colorScheme: scheme,
       deviceScaleFactor: 2,
       reducedMotion: "reduce",
-    };
-
-    const context = await browser.newContext(options);
+      hasTouch: device === "mobile",
+      isMobile: device === "mobile",
+    });
+    await stubCustomerio(context);
     const page = await context.newPage();
+
+    await db.query("delete from email_status");
     await page.goto(BASE_URL);
     await shoot(page, `landing-${suffix}`);
-    await page.goto(`${BASE_URL}/sign-in`);
-    await shoot(page, `sign-in-${suffix}`);
-    await signInWithDemo(page);
-    await shoot(page, `dashboard-missing-env-${suffix}`);
-    await context.close();
 
-    if (SETUP_URL) {
-      const setup = await browser.newContext(options);
-      await addSetupCookies(setup);
-      const setupPage = await setup.newPage();
-      await setupPage.goto(`${SETUP_URL}/dashboard`);
-      await setupPage.waitForURL("**/dashboard");
-      await shoot(setupPage, `dashboard-email-setup-${suffix}`);
-      await setup.close();
-    }
+    // A new workspace: Customer.io has not approved it for sending yet.
+    setMode("not_approved");
+    await page.goto(`${BASE_URL}/sign-in`);
+    await page.getByLabel("Work email").fill(`ada.${suffix}@example.com`);
+    await page.getByRole("button", { name: "Email me a sign-in link" }).click();
+    await page.waitForURL("**/check-email");
+    await shoot(page, `check-email-${suffix}`);
+
+    await page.goto(`${BASE_URL}/sign-in`);
+    await page.getByText("Sign-in emails can’t go out yet").waitFor();
+    await shoot(page, `sign-in-not-ready-${suffix}`);
+
+    await page.goto(lastLink());
+    await page.waitForURL("**/dashboard");
+    await page.waitForTimeout(800); // the signup steps run after the response
+    await page.reload();
+    await page.getByRole("button", { name: /^Inbox/ }).click();
+    await page.getByText("Your workspace is ready").waitFor();
+    await shoot(page, `dashboard-inbox-${suffix}`);
+    await page.keyboard.press("Escape");
+
+    await page.goto(`${BASE_URL}/status`);
+    await shoot(page, `status-not-ready-${suffix}`);
+
+    // Once a send works, the state flips to ready.
+    await db.query(
+      "update email_status set state = 'ready', reason = null, message = null, http_status = null, checked_at = now()",
+    );
+    await page.goto(`${BASE_URL}/status`);
+    await shoot(page, `status-ready-${suffix}`);
+
+    setMode("ok");
+    await context.close();
   }
 }
 
 await browser.close();
+await db.end();

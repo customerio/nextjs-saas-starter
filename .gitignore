@@ -24,3 +24,7 @@ next-env.d.ts
 *.pem
 npm-debug.log*
 pnpm-debug.log*
+
+# local tools
+/.fake-customerio/
+/screenshots/
