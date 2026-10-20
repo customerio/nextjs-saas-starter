@@ -1,13 +1,13 @@
 # Next.js SaaS starter with Customer.io
 
-A small SaaS app you can deploy in one click and then make your own. It has:
+A small SaaS app you can deploy in one click and make your own:
 
 - **Email sign-in** with a magic link (Auth.js). No passwords.
-- **A Postgres database** on Neon, added for you when you deploy.
-- **Customer.io** for the messages every SaaS needs on day one: the sign-in email, a welcome email, a note to you when someone signs up, and in-app messages with an inbox.
-- **A small, useful dashboard:** one example resource ("projects", renamed in one line) with create and delete, and a "Get started" checklist. Every action sends a Customer.io event you can build campaigns on.
+- **Postgres on Neon**, added for you when you deploy.
+- **Customer.io** for the sign-in email, a welcome email, a note to you for each signup, page views, and in-app messages with an inbox.
+- **A small dashboard** with one example resource ("projects") and a "Get started" checklist. Every action sends a Customer.io event.
 
-The app is called **Acme**. That is a placeholder name and logo. Change them in `lib/site.ts` and `components/logo.tsx`.
+The app is called **Acme**, a placeholder. Change the name and logo in `lib/site.ts` and `components/logo.tsx`.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcustomerio%2Fvercel-nextjs-starter&integration-ids=oac_87hWAXW9Pa4LMmmqpHzszxtH&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%5D&env=AUTH_SECRET&envDescription=A%20random%20secret%20for%20Auth.js.%20Run%20%60npx%20auth%20secret%60%20or%20%60openssl%20rand%20-base64%2033%60%20and%20paste%20the%20value.&envLink=https%3A%2F%2Fauthjs.dev%2Fgetting-started%2Finstallation%23setup-environment&project-name=acme-saas&repository-name=acme-saas)
 
@@ -19,246 +19,82 @@ The app is called **Acme**. That is a placeholder name and logo. Change them in 
 
 ## Deploy
 
-1. Click **Deploy with Vercel** above.
-2. Vercel adds two integrations:
-   - **Customer.io** connects a workspace and writes the `CUSTOMERIO_*` variables.
-   - **Neon** creates a Postgres database and writes `DATABASE_URL` and `DATABASE_URL_UNPOOLED`.
-3. Vercel asks you for one value, **`AUTH_SECRET`**. Make one with either command and paste it:
+1. Click **Deploy with Vercel**. Vercel adds **Customer.io** (connects a workspace and writes the `CUSTOMERIO_*` variables) and **Neon** (creates the database).
+2. Vercel asks for one value, **`AUTH_SECRET`**. Make one with `npx auth secret` or `openssl rand -base64 33`.
+3. Vercel builds the app. The build creates the database tables first.
 
-   ```sh
-   npx auth secret          # prints a secret (and writes it to .env.local)
-   openssl rand -base64 33
-   ```
-
-4. Vercel builds the app. The build creates the database tables first.
-5. Open your site and sign in with the email of your Vercel account. That person is the **owner**: the Customer.io integration writes their email as `CUSTOMERIO_OWNER_EMAIL`. To pick someone else, set `OWNER_EMAIL`.
-
-A brand-new Customer.io workspace can't send email yet, so your first sign-in link will not arrive by email. That is normal: see the next section.
+The person who installed the integration is the **owner**. Their email is written as `CUSTOMERIO_OWNER_EMAIL`. To pick someone else, set `OWNER_EMAIL`.
 
 ## First sign-in after deploying
 
-1. Open your new site and go to **Sign in**.
-2. Type the email of your Vercel account (the owner) and continue.
-3. In Vercel, open your project → **Logs**. Find the line that starts with `[acme] Owner sign-in link (shown because email isn't set up yet):`.
-4. Open that link in the same browser. You're signed in.
-5. Open **`/status`**. It shows what is left before email can send (see [Email readiness](#email-readiness)).
+A new Customer.io workspace can't send email yet, so your first link won't arrive by email. That is normal.
 
-The link is written to the log only for the owner's email, and only while email can't go out. Links for anyone else are never logged. Once email works, the owner gets the link by email like everyone else. Links expire after 15 minutes and work once.
+1. Open your site, go to **Sign in**, and type the owner's email.
+2. In Vercel, open your project, then **Logs**. Find the line that starts with `[acme] Owner sign-in link`.
+3. Open that link in the same browser. You're signed in.
+4. Open **`/status`** to see what is left before email can send.
 
-## How it works
+Only the owner's link is logged, and only while email can't go out. Links work once and expire after 15 minutes.
 
-```
-Someone types their email
-  └─ Auth.js makes a one-time link and calls our email provider (auth.ts)
-       ├─ rate limit: 3 links per email, 10 per IP, per 15 minutes
-       ├─ save the person in Postgres (not verified yet)
-       ├─ send the link with the Transactional API
-       │    └─ the answer is stored: "ready" or "blocked, and why"
-       └─ Customer.io: identify (email_verified: false) + event signup_started
+## Turn on email
 
-They open the link: that is the signup (only once per person, enforced in Postgres)
-  ├─ identify (email_verified: true, created_at)
-  ├─ event signed_up
-  ├─ welcome email
-  └─ a note to the owner, if there is one
+`/status` walks you through these steps and checks them for you:
 
-In the browser (when CUSTOMERIO_CDP_WRITE_KEY is set)
-  ├─ page view on every route change
-  ├─ identify with the same user ID as the server, reset on sign-out
-  └─ in-app messages, and an inbox under the bell in the header
-```
+1. **Confirm the account owner's email** from the message Customer.io sent you.
+2. **Get the account approved for sending.** See [account verification](https://docs.customer.io/accounts/account-verification/).
+3. **Verify a sending domain.** See [domain authentication](https://docs.customer.io/messaging/channels/email/deliverability/authentication/).
+4. **Turn off test mode** in your workspace settings: pick **Send messages normally**. Until then, email only reaches the account owner.
 
-Some rules the code follows, so you can keep them when you change it:
-
-- **Customer.io never blocks sign-in.** Every call returns a result and never throws. After sign-in, the Customer.io calls run in the background (`after()` in Next.js), so a slow answer can't slow the page.
-- **The signup runs once.** One atomic database update marks a person as signed up. A second browser, a double click, or a retry does not send a second welcome email.
-- **A stable ID per person.** Customer.io gets the user's ID from Postgres, never the email. The same ID is used before and after they confirm, and in the browser.
-- **Secrets stay on the server.** Only the browser write key and site ID reach the browser. They are public by design, and they are passed from the server; there are no `NEXT_PUBLIC_` copies.
-- **Sign-in links are not kept.** Link emails go out with click tracking off and message retention off, so the link is never rewritten or stored in Customer.io.
-- **Timeouts on every call** (5 seconds). Identify and events retry once. Emails never retry, so a slow answer can't send two copies.
-
-The code is small. Start here:
-
-| Path                                              | What it does                                                                                     |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| [`auth.ts`](auth.ts)                              | Auth.js: the Customer.io email provider, the rate limit, database sessions.                      |
-| [`lib/flows/`](lib/flows)                         | The flows: link request, signup, "Check again". Each takes its dependencies, so tests use fakes. |
-| [`lib/customerio/`](lib/customerio)               | Config, clients, error types, email readiness, built-in emails, browser SDK config.              |
-| [`lib/db/`](lib/db)                               | Drizzle schema, queries, and the connection. SQL migrations are in [`drizzle/`](drizzle).        |
-| [`components/customerio/`](components/customerio) | The browser SDK provider and the inbox.                                                          |
-| [`app/(app)/status/`](<app/(app)/status>)         | The status page, for the owner only.                                                             |
-
-### Choices, and why
-
-- **Database sessions, not JWT.** The Drizzle adapter uses database sessions by default, so there is nothing extra to set up. The cookie only holds a random ID, and signing out really ends the session.
-- **`pg` (node-postgres) as the driver.** It works with Neon on Vercel and with any plain Postgres on your laptop, so there is one code path. On Vercel's Fluid compute the pool is reused between requests, and `attachDatabasePool` closes idle connections. Neon's own serverless driver would need a proxy to talk to a local Postgres.
-- **Migrations before the build.** `pnpm build` runs `node scripts/migrate.ts` and then `next build`. It uses `DATABASE_URL_UNPOOLED` (a direct connection), because migrations need a real session. The app itself uses the pooled `DATABASE_URL`.
+While email is off, visitors see "Sign-in emails aren't on yet" and are saved as leads. Once a send works, everything turns on by itself.
 
 ## Environment variables
 
-| Variable                           | Written by               | Needed                | What it is for                                                                                                 |
-| ---------------------------------- | ------------------------ | --------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `AUTH_SECRET`                      | You (Deploy Button asks) | Yes                   | Signs Auth.js cookies and hashes link tokens.                                                                  |
-| `DATABASE_URL`                     | Neon                     | Yes                   | Pooled Postgres URL the app uses.                                                                              |
-| `DATABASE_URL_UNPOOLED`            | Neon                     | Yes, for builds       | Direct Postgres URL for migrations.                                                                            |
-| `CUSTOMERIO_SITE_ID`               | Customer.io              | For people and events | Track API site ID. The browser also uses it for in-app messages.                                               |
-| `CUSTOMERIO_TRACK_API_KEY`         | Customer.io              | For people and events | Track API key. Server only.                                                                                    |
-| `CUSTOMERIO_APP_API_KEY`           | Customer.io              | For email             | App API key, send only. Production and Preview only.                                                           |
-| `CUSTOMERIO_WORKSPACE_ID`          | Customer.io              | No                    | Links the status page to your workspace.                                                                       |
-| `CUSTOMERIO_REGION`                | Customer.io              | Yes                   | `us` or `eu`. Picks the API hosts.                                                                             |
-| `CUSTOMERIO_CDP_WRITE_KEY`         | Customer.io              | For the browser SDK   | Public by design. US workspaces only for now.                                                                  |
-| `CUSTOMERIO_FROM_EMAIL`            | You                      | No                    | Sender address. Without it, Customer.io uses your verified domain's default sender.                            |
-| `CUSTOMERIO_OWNER_EMAIL`           | Customer.io              | For `/status`         | The email of the Vercel user who installed the integration. The owner, unless `OWNER_EMAIL` is set.            |
-| `OWNER_EMAIL`                      | You                      | No                    | Overrides the owner. The owner is the only person who can open `/status`, and gets a note for each new signup. |
-| `CUSTOMERIO_MAGIC_LINK_MESSAGE_ID` | You                      | No                    | Send a sign-in email you designed in Customer.io instead of the built-in one.                                  |
-| `CUSTOMERIO_WELCOME_MESSAGE_ID`    | You                      | No                    | Send a welcome email you designed in Customer.io instead of the built-in one.                                  |
+| Variable                   | Set by      | What it is for                                                 |
+| -------------------------- | ----------- | -------------------------------------------------------------- |
+| `AUTH_SECRET`              | You         | Signs Auth.js cookies and link tokens.                         |
+| `DATABASE_URL`             | Neon        | Pooled Postgres URL for the app.                               |
+| `DATABASE_URL_UNPOOLED`    | Neon        | Direct Postgres URL for migrations.                            |
+| `CUSTOMERIO_SITE_ID`       | Customer.io | Track API site ID.                                             |
+| `CUSTOMERIO_TRACK_API_KEY` | Customer.io | Track API key (server only).                                   |
+| `CUSTOMERIO_APP_API_KEY`   | Customer.io | Sends email. Production and Preview only.                      |
+| `CUSTOMERIO_CDP_WRITE_KEY` | Customer.io | Browser SDK key: page views, in-app messages, inbox. Public.   |
+| `CUSTOMERIO_REGION`        | Customer.io | `us` or `eu`. Picks the API hosts.                             |
+| `CUSTOMERIO_WORKSPACE_ID`  | Customer.io | Links the status page to your workspace.                       |
+| `CUSTOMERIO_OWNER_EMAIL`   | Customer.io | The owner: can open `/status` and gets a note for each signup. |
+| `OWNER_EMAIL`              | You         | Optional. Overrides the owner.                                 |
+| `CUSTOMERIO_FROM_EMAIL`    | You         | Optional. Sender address on your verified domain.              |
 
-Neon also writes `POSTGRES_URL` and `POSTGRES_URL_NON_POOLING`. The app accepts them if the `DATABASE_URL*` names are missing.
+More optional settings (your own email designs, for example) are in [`.env.example`](.env.example). `/status` shows which variables are set, never their values.
 
-Every variable is explained in [`.env.example`](.env.example). The **status page** (`/status`) shows which ones are set, never their values.
+## Events
 
-## The status page
-
-`/status` is for the owner: the signed-in person whose email is `OWNER_EMAIL`, or `CUSTOMERIO_OWNER_EMAIL` when that is not set. Everyone else gets a 404. With neither, local dev lets any signed-in person in; a deployed site shows a short note asking you to set one.
-
-It shows email readiness with the setup checklist and **Check again**, whether the browser SDK loaded, what was sent to Customer.io when you signed up, and which variables are set.
-
-## Email readiness
-
-A new Customer.io workspace can't send email to real people until four things are done. Customer.io checks the first three in this order and tells us the first one that is still open:
-
-1. **Confirm the account owner's email.** Open the link Customer.io sent when you made the account.
-2. **Get the account approved for sending.** Customer.io reviews new accounts. Fill in your account details in Customer.io to start. See [account verification](https://docs.customer.io/accounts/account-verification/).
-3. **Verify a sending domain.** Add the DNS records Customer.io gives you. See [domain authentication](https://docs.customer.io/messaging/channels/email/deliverability/authentication/). To pick the exact sender, set `CUSTOMERIO_FROM_EMAIL` to an address on that domain.
-4. **Turn off test mode.** New workspaces start in test mode: Customer.io accepts every email, but it only reaches the account owner, from a Customer.io test address. In your workspace settings, under "How do you want to send messages?", pick **Send messages normally**. See [message sending](https://docs.customer.io/accounts/workspaces/overview/#message-sending). The app can't see this setting (its key can only send), so the status page shows this step as "Can't check from here".
-
-The app never asks Customer.io about this directly. Every email it sends is also the check: the answer is stored in one database row (`email_status`). While email is blocked:
-
-- Visitors see one calm line on the sign-in form ("Sign-in emails aren't on yet. Try again soon."). No setup details are ever shown to them.
-- People can still ask for a link. They are saved, and Customer.io gets `signup_started`. The page tells them their email is saved and to try again soon.
-- The status page shows you the checklist, with the open step marked.
-- **The owner can still get in.** On any Vercel deployment, the owner's link goes to the Vercel logs (see [First sign-in after deploying](#first-sign-in-after-deploying)); the sign-in page shows a quiet "Own this site?" line pointing there, the same for every visitor. In local dev, every link prints in your terminal. On a **Preview** deployment, the link also shows on the page with a "Preview only" label (only for the owner, if there is one). Production never shows a link on the page.
-
-**Check again** (on the status page, owner only) sends one short test email to the owner and stores the answer. While email is blocked, nothing arrives. The first time it works, you get one "Email works" note and the checklist goes away. It waits 30 seconds between checks.
-
-**If Customer.io answers "Do Not Send"** (403), the account isn't active: the trial ended, the account was suspended or cancelled, or the workspace is set to "Never send messages". The status page says "Your Customer.io account isn't active" and links to Customer.io and to [how billing works](https://docs.customer.io/accounts/billing/how-we-bill/). Visitors still see only the calm line, sign-in is never blocked, and the owner's link still goes to the logs.
-
-**If emails don't arrive** even though the status page says email works: Customer.io can accept an email and still not deliver it. Test mode, the daily limit for new accounts, content checks, and your plan's monthly limit (or, on pay-as-you-go plans, available funds) all happen after the API says yes, so the app can't see them. Open **Deliveries** in your workspace to see what happened to each email, and see [why messages don't arrive](https://docs.customer.io/messaging/send/automations/troubleshoot/messages-not-sending/).
-
-Once any send works, the state flips to ready by itself. Emails that failed before that (like your own welcome email) are not sent again; the status page shows them as "Not sent".
-
-## Get told about each signup
-
-With an owner set (`CUSTOMERIO_OWNER_EMAIL` or `OWNER_EMAIL`), the app emails you when someone confirms their email ("Acme has its first signup", then "New signup on Acme"). It skips your own signup.
-
-For more than that, use the `signed_up` event instead: in Customer.io, make a [campaign](https://docs.customer.io/messaging/send/automations/overview/) that starts when a person performs `signed_up`, and send yourself an email from it. You can add a welcome series for the person in the same campaign, with no code change.
-
-## Events this app sends
-
-Every event goes to Customer.io from the server with the person's user ID, after the response, so a Customer.io problem never slows or fails what the person did. The pattern is one call in [`lib/flows/app-events.ts`](lib/flows/app-events.ts):
-
-```ts
-track(deps, user.id, "project_created", { project_id: project.id, name: project.name });
-```
-
-| Event                       | When                                                                 | Properties                                                   |
-| --------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `signup_started`            | Someone asks for a sign-in link before they have an account          | none                                                         |
-| `signed_up`                 | They open their first link (once per person)                         | `method: "email"`                                            |
-| `project_created`           | They create one of the example resource                              | `project_id`, `name`                                         |
-| `project_deleted`           | They delete one                                                      | `project_id`, `name`                                         |
-| `teammate_invited`          | They enter a teammate's email in "Get started"                       | `invitee_email`                                              |
-| `onboarding_step_completed` | A "Get started" step is done (once per step)                         | `step`: `create_project`, `open_inbox`, or `invite_teammate` |
-| `onboarding_completed`      | Every step is done (once)                                            | none                                                         |
-| Page views                  | Every route change, from the browser SDK (when the write key is set) | page URL, title                                              |
-
-The person is identified before `signup_started` (`email`, `email_verified: false`) and again at `signed_up` (`email`, `email_verified: true`, `created_at`).
-
-### Campaign ideas
-
-- **Finish signing up:** starts on `signup_started`, waits a day, exits if `signed_up` happens. One email: "Your link expired. Here's a new way in."
-- **Invite your teammate:** starts on `teammate_invited` and sends an email _to the invitee_ (use the `invitee_email` property as the recipient). The template never emails invitees itself, so you own the copy and timing.
-- **First-week nudge:** starts on `signed_up`, waits three days, and sends a tip if `onboarding_completed` has not happened; stop it as soon as it does.
-
-## Browser SDK, in-app messages, and the inbox
-
-When `CUSTOMERIO_CDP_WRITE_KEY` is set, the app loads [`@customerio/cdp-analytics-browser`](https://docs.customer.io/integrations/data-in/connections/javascript/js-source/) once, with the in-app plugin turned on through the site ID. Send an [in-app message](https://docs.customer.io/messaging/channels/in-app/getting-started/) and it shows in the app. Send an [inbox message](https://docs.customer.io/messaging/channels/in-app/inbox/) and it shows under the bell, with an unread count.
-
-If an ad blocker stops the SDK, the app works the same. The status page says so.
-
-The app has no built-in messages: it shows whatever your workspace sends. To welcome new people inside the app:
-
-1. In Customer.io, make a campaign that starts on `signed_up`.
-2. Add an in-app message. Pick a modal, or choose **Inline** with element ID `dashboard-message` to place it at the top of the dashboard (the slot takes no space until a message arrives).
-3. Send it. It appears the next time the person opens the app. Opening the bell counts for the "Check your inbox" step.
-
-## EU workspaces
-
-Set `CUSTOMERIO_REGION=eu` (the integration does this). The server then talks only to the EU hosts (`track-eu.customer.io`, `api-eu.customer.io`), and the browser SDK uses `https://cdp-eu.customer.io`.
-
-For now, the integration does not write a browser write key for EU workspaces. So in the EU, the browser SDK is off: page views, in-app messages, and the inbox wait for the key. Sign-in, server events, and email work as usual. The status page explains this.
+The app sends `signup_started`, `signed_up`, `project_created`, `project_deleted`, `teammate_invited`, `onboarding_step_completed`, and `onboarding_completed`, plus page views from the browser. Build campaigns on them in Customer.io. The full list, with properties and campaign ideas, is in [how it works](docs/how-it-works.md#events-this-app-sends).
 
 ## Local development
 
-You need Node.js 24, pnpm, and a Postgres database.
-
-**Option A: Docker**
+You need Node.js 24, pnpm, and Postgres. With [mise](https://mise.jdx.dev), `mise install` sets up the pinned Node and pnpm.
 
 ```sh
 docker run -d --name acme-postgres -e POSTGRES_PASSWORD=acme -p 5432:5432 postgres:17
-```
-
-Then in `.env.local`:
-
-```sh
-DATABASE_URL=postgres://postgres:acme@localhost:5432/postgres
-DATABASE_URL_UNPOOLED=postgres://postgres:acme@localhost:5432/postgres
-```
-
-**Option B: a Neon branch.** Make a development branch in Neon, then copy your project's variables with the Vercel CLI:
-
-```sh
-vercel link
-vercel env pull        # writes .env.local
-```
-
-Then:
-
-```sh
+cp .env.example .env.local   # already points at this database
 pnpm install
 pnpm db:migrate
 pnpm dev
 ```
 
-`pnpm db:migrate` reads `.env.local` like `pnpm dev` does, so the same file sets up both.
+Open http://localhost:3000 and sign in. Locally no email goes out: **your sign-in link prints in the terminal**. Without `CUSTOMERIO_*` variables the app still runs and skips the Customer.io calls. To try the whole flow without a workspace, use the fake Customer.io in [`scripts/fake-customerio.mjs`](scripts/fake-customerio.mjs).
 
-Open http://localhost:3000 and sign in. `CUSTOMERIO_APP_API_KEY` is only in Production and Preview, so locally no email goes out: **your sign-in link prints in the terminal** that runs `pnpm dev`.
-
-Without any `CUSTOMERIO_*` variables the app still runs. It skips the Customer.io calls, and the status page says what is missing.
-
-To try the whole flow without a real workspace, load the fake Customer.io in [`scripts/fake-customerio.mjs`](scripts/fake-customerio.mjs). It answers every server call locally, and you can switch it between "ok" and "not approved".
-
-Scripts:
-
-```sh
-pnpm dev           # dev server
-pnpm build         # migrate, then production build
-pnpm db:generate   # new SQL migration after you change lib/db/schema.ts
-pnpm db:migrate    # apply migrations
-pnpm lint          # ESLint
-pnpm typecheck     # TypeScript
-pnpm test          # unit tests (Vitest, with an in-memory Postgres)
-pnpm screenshots   # every page, light and dark, desktop and phone
-```
+Other scripts: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm db:generate` (after you change `lib/db/schema.ts`), and `pnpm screenshots`.
 
 ## Make it yours
 
 - **Name and logo:** `lib/site.ts`, `components/logo.tsx`, `app/icon.svg`.
-- **Colors and themes:** the tokens at the top of `app/globals.css`: light on `:root`, dark under `[data-theme="dark"]`. People pick Light, Dark, or System (the default) from the switcher in the header; the choice is saved in the browser and applied before the page paints (`lib/theme.ts`).
-- **Emails:** edit `lib/customerio/emails.ts`, or design them in Customer.io and set `CUSTOMERIO_MAGIC_LINK_MESSAGE_ID` / `CUSTOMERIO_WELCOME_MESSAGE_ID`. Your message gets `message_data` with `url`, `app_name`, `expires_in_minutes` (sign-in) or `app_name`, `dashboard_url` (welcome).
-- **The example resource:** rename it in `lib/site.ts` (`resource: { singular: "project", plural: "projects" }`) and every label changes. The table stays `projects`; rename it in `lib/db/schema.ts` too if you want, then `pnpm db:generate`. Replace it with your real feature in `app/(app)/dashboard/` and `lib/flows/projects.ts`.
-- **Tables:** add them to `lib/db/schema.ts`, run `pnpm db:generate`, and commit the new file in `drizzle/`.
-- **Fonts:** Figtree, loaded with `next/font` in `app/layout.tsx`.
+- **Colors:** the tokens at the top of `app/globals.css`.
+- **Emails:** `lib/customerio/emails.ts`, or design them in Customer.io (see `.env.example`).
+- **The example resource:** rename it in `lib/site.ts`, then replace it with your feature in `app/(app)/dashboard/` and `lib/flows/projects.ts`.
+- **Tables:** edit `lib/db/schema.ts`, run `pnpm db:generate`, and commit the new file in `drizzle/`.
+
+How the flows, rules, and code are put together: [docs/how-it-works.md](docs/how-it-works.md).
 
 ## License
 
