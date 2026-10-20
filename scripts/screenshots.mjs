@@ -12,7 +12,7 @@
  *   export DATABASE_URL=postgres://postgres:acme@localhost:55432/postgres
  *   export FAKE_CIO_DIR=/tmp/acme-fake-cio  CUSTOMERIO_SITE_ID=x  CUSTOMERIO_TRACK_API_KEY=x \
  *          CUSTOMERIO_APP_API_KEY=x  CUSTOMERIO_CDP_WRITE_KEY=x  CUSTOMERIO_WORKSPACE_ID=1 \
- *          AUTH_SECRET=$(openssl rand -base64 33)  AUTH_TRUST_HOST=true
+ *          OWNER_EMAIL=owner@acme.test  AUTH_SECRET=$(openssl rand -base64 33)  AUTH_TRUST_HOST=true
  *   pnpm build && NODE_OPTIONS="--import ./scripts/fake-customerio.mjs" pnpm start &
  *   THROWAWAY_DATABASE_URL=$DATABASE_URL OUT=./screenshots pnpm screenshots
  */
@@ -27,6 +27,8 @@ const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const OUT = path.resolve(process.env.OUT ?? "screenshots");
 const FAKE_DIR = process.env.FAKE_CIO_DIR;
 const DB_URL = process.env.THROWAWAY_DATABASE_URL;
+// Must match the server's OWNER_EMAIL: the status page is for the owner only.
+const OWNER_EMAIL = process.env.OWNER_EMAIL ?? "owner@acme.test";
 if (!FAKE_DIR || !DB_URL) {
   console.error(
     "Set FAKE_CIO_DIR and THROWAWAY_DATABASE_URL. See the comment at the top of this file.",
@@ -130,6 +132,10 @@ function lastLink() {
 
 async function shoot(page, name) {
   await page.evaluate(() => document.fonts.ready);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
+  if (overflow > 0) throw new Error(`${name}: the page scrolls sideways by ${overflow}px`);
   const file = path.join(OUT, `${name}.png`);
   await page.screenshot({ path: file, fullPage: true });
   console.log(file);
@@ -137,9 +143,10 @@ async function shoot(page, name) {
 
 const db = new pg.Client({ connectionString: DB_URL });
 await db.connect();
-await db.query(
-  "truncate users, accounts, sessions, verification_tokens, email_status, rate_limit_hits, signups cascade",
-);
+const resetTables = () =>
+  db.query(
+    "truncate users, accounts, sessions, verification_tokens, email_status, rate_limit_hits, signups cascade",
+  );
 
 await mkdir(OUT, { recursive: true });
 const browser = await chromium.launch();
@@ -158,20 +165,20 @@ for (const scheme of ["light", "dark"]) {
     await stubCustomerio(context);
     const page = await context.newPage();
 
-    await db.query("delete from email_status");
+    await resetTables();
     await page.goto(BASE_URL);
     await shoot(page, `landing-${suffix}`);
 
     // A new workspace: Customer.io has not approved it for sending yet.
     setMode("not_approved");
     await page.goto(`${BASE_URL}/sign-in`);
-    await page.getByLabel("Work email").fill(`ada.${suffix}@example.com`);
-    await page.getByRole("button", { name: "Email me a sign-in link" }).click();
+    await page.getByLabel("Email").fill(OWNER_EMAIL);
+    await page.getByRole("button", { name: "Continue with email" }).click();
     await page.waitForURL("**/check-email");
     await shoot(page, `check-email-${suffix}`);
 
     await page.goto(`${BASE_URL}/sign-in`);
-    await page.getByText("Sign-in emails can’t go out yet").waitFor();
+    await page.getByText("Sign-in emails aren’t on yet").waitFor();
     await shoot(page, `sign-in-not-ready-${suffix}`);
 
     await page.goto(lastLink());

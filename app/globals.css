@@ -23,6 +23,8 @@
   --wait: #8a5d00;
   --wait-surface: #fbf4dc;
   --danger: #b42318;
+  --focus-halo: rgb(23 25 28 / 0.08);
+  --danger-halo: rgb(180 35 24 / 0.12);
   --raised:
     0 0 0 1px rgb(23 25 28 / 0.06), 0 1px 2px rgb(23 25 28 / 0.05),
     0 6px 16px -8px rgb(23 25 28 / 0.12);
@@ -51,6 +53,8 @@
     --wait: #e2b54f;
     --wait-surface: #221d10;
     --danger: #ff8a7a;
+    --focus-halo: rgb(236 237 237 / 0.12);
+    --danger-halo: rgb(255 138 122 / 0.16);
     --raised: 0 0 0 1px #2a2e34;
     --overlay: 0 0 0 1px #30353b, 0 18px 40px -12px rgb(0 0 0 / 0.6);
     color-scheme: dark;
@@ -58,8 +62,7 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   --color-canvas: var(--canvas);
@@ -82,12 +85,13 @@
   --shadow-raised: var(--raised);
   --shadow-overlay: var(--overlay);
 
-  --text-display: clamp(2.5rem, 1.7rem + 3.4vw, 4rem);
-  --text-display--line-height: 1.02;
-  --text-display--letter-spacing: -0.03em;
-  --text-title: clamp(1.625rem, 1.35rem + 1.1vw, 2.125rem);
-  --text-title--line-height: 1.12;
-  --text-title--letter-spacing: -0.018em;
+  /* Figtree is round and open: headings stay at 600 with only a touch of tightening. */
+  --text-display: clamp(2.375rem, 1.9rem + 2vw, 3.25rem);
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.015em;
+  --text-title: clamp(1.5rem, 1.35rem + 0.6vw, 1.75rem);
+  --text-title--line-height: 1.2;
+  --text-title--letter-spacing: -0.01em;
 
   --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -148,12 +152,6 @@
       transition-duration: 0.01ms !important;
     }
   }
-}
-
-@utility font-display-tight {
-  font-family: var(--font-display);
-  font-stretch: 85%;
-  font-optical-sizing: auto;
 }
 
 @utility link {

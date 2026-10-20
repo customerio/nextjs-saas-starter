@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { links } from "@/lib/links";
 import { site } from "@/lib/site";
 
-import { AcmeLogo } from "./logo";
+import { AcmeLogo, AcmeMark } from "./logo";
 
 export function MarketingHeader({ children }: { children?: ReactNode }) {
   return (
@@ -30,22 +30,35 @@ export function PoweredBy() {
   return (
     <a
       href={links.customerio}
-      className="inline-flex min-h-11 items-center text-sm text-faint transition-colors duration-150 hover:text-ink"
+      className="inline-flex min-h-11 items-center text-[0.8125rem] text-faint transition-colors duration-150 hover:text-ink"
     >
       Powered by Customer.io
     </a>
   );
 }
 
-export function MarketingFooter() {
+/**
+ * The frame for sign-in and "check your email": one centered column, the
+ * mark on top, and nothing else on the page.
+ */
+export function AuthShell({ children }: { children: ReactNode }) {
   return (
-    <footer className="mx-auto w-full max-w-6xl px-5 sm:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t border-line py-6 text-sm text-faint">
-        <p>
-          Acme is a placeholder. Make it yours in <code>lib/site.ts</code>.
-        </p>
+    <div className="flex min-h-dvh flex-col px-5">
+      <main id="main" className="flex flex-1 flex-col items-center justify-center py-16">
+        <div className="w-full max-w-[22.5rem]">
+          <Link
+            href="/"
+            aria-label={`${site.name} home`}
+            className="-m-1.5 inline-flex rounded-xl p-1.5"
+          >
+            <AcmeMark className="size-9" />
+          </Link>
+          {children}
+        </div>
+      </main>
+      <footer className="flex justify-center pb-4">
         <PoweredBy />
-      </div>
-    </footer>
+      </footer>
+    </div>
   );
 }

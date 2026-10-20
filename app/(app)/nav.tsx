@@ -8,11 +8,14 @@ const ITEMS = [
   { href: "/status", label: "Status" },
 ] as const;
 
-export function AppNav() {
+/** The status page is for the owner only, so only the owner sees its link. */
+export function AppNav({ showStatus }: { showStatus: boolean }) {
   const pathname = usePathname();
+  const items = showStatus ? ITEMS : ITEMS.filter((item) => item.href !== "/status");
+  if (items.length < 2) return null;
   return (
     <nav aria-label="Main" className="flex items-center gap-1">
-      {ITEMS.map((item) => {
+      {items.map((item) => {
         const current = pathname === item.href;
         return (
           <Link

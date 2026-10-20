@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { EmailSetup } from "@/components/email/email-setup";
-import { MarketingFooter, MarketingHeader } from "@/components/site-chrome";
-import { getCustomerioConfig } from "@/lib/customerio/config";
+import { AuthShell } from "@/components/site-chrome";
+import { visitorNotice } from "@/lib/flows/owner";
 import { loadReadiness } from "@/lib/readiness-server";
 import { getSession } from "@/lib/session";
 
@@ -12,13 +11,10 @@ import { LinkForm } from "./link-form";
 export const metadata: Metadata = { title: "Sign in" };
 
 const ERRORS: Record<string, string> = {
-  rate_limited:
-    "You asked for a few links in a row. Wait 15 minutes, or use the newest link in your inbox.",
-  Verification:
-    "That sign-in link has expired or was already used. Enter your email for a new one.",
-  AccessDenied: "That sign-in wasn’t allowed. Enter your email for a new link.",
-  Configuration:
-    "Sign-in isn’t set up correctly on this site. If it’s yours, check the server logs.",
+  rate_limited: "Too many links in a row. Wait 15 minutes, or use the newest one in your inbox.",
+  Verification: "That link has expired or was already used. Ask for a new one below.",
+  AccessDenied: "That sign-in wasn’t allowed. Ask for a new link below.",
+  Configuration: "Sign-in isn’t set up correctly on this site.",
 };
 
 export default async function SignInPage({ searchParams }: PageProps<"/sign-in">) {
@@ -28,40 +24,32 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
   const { error } = await searchParams;
   const message =
     typeof error === "string" ? (ERRORS[error] ?? "Sign-in didn’t work. Try again.") : null;
-  const readiness = await loadReadiness();
+  const notice = visitorNotice(await loadReadiness(), process.env.NODE_ENV === "development");
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <MarketingHeader />
-      <main id="main" className="mx-auto w-full max-w-[34rem] flex-1 px-5 pt-8 pb-20 sm:pt-16">
-        <h1 className="font-display-tight text-title font-semibold">Sign in to Acme</h1>
-        <p className="mt-2 text-muted">
-          We’ll email you a link. It works once and expires in 15 minutes.
-        </p>
+    <AuthShell>
+      <h1 className="mt-8 text-[1.625rem] leading-tight font-semibold tracking-[-0.01em]">
+        Sign in to Acme
+      </h1>
+      <p className="mt-2 text-muted">We’ll email you a link to sign in.</p>
 
-        {message ? (
-          <p
-            role="alert"
-            className="mt-6 rounded-xl bg-surface px-4 py-3 text-sm leading-6 shadow-raised"
+      {message ? (
+        <p role="alert" className="mt-6 flex items-start gap-2 text-sm leading-5 text-danger">
+          <svg
+            viewBox="0 0 16 16"
+            aria-hidden="true"
+            className="mt-0.5 size-4 shrink-0"
+            fill="currentColor"
           >
-            {message}
-          </p>
-        ) : null}
+            <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM7.25 4.5h1.5v4.25h-1.5V4.5Zm0 5.75h1.5v1.5h-1.5v-1.5Z" />
+          </svg>
+          {message}
+        </p>
+      ) : null}
 
-        <div className="mt-6 rounded-2xl bg-surface p-5 shadow-raised sm:p-6">
-          <LinkForm autoFocus />
-        </div>
-
-        <div className="mt-6">
-          <EmailSetup
-            readiness={readiness}
-            config={getCustomerioConfig()}
-            audience="visitor"
-            signedInEmail={null}
-          />
-        </div>
-      </main>
-      <MarketingFooter />
-    </div>
+      <div className="mt-8">
+        <LinkForm autoFocus notice={notice} />
+      </div>
+    </AuthShell>
   );
 }

@@ -109,9 +109,17 @@ export function stepView(
           note: "Email wasn’t set up yet when this ran. Email works now, so the next ones go out.",
         };
       }
+      if (setup) {
+        // The checklist above says what to do; the raw message would only repeat it.
+        return {
+          state: "current",
+          label: "Waiting on email setup",
+          note: FAILURE_HINTS[record.failure.kind],
+        };
+      }
       return {
-        state: setup ? "current" : "failed",
-        label: setup ? "Waiting on email setup" : "Failed",
+        state: "failed",
+        label: "Failed",
         note: (
           <>
             <span className="block text-ink">
@@ -140,12 +148,11 @@ export function SignupTrace({
   emailReady: boolean;
 }) {
   const endpoints = signupEndpoints(region);
-  const rows: { key: TraceKey; title: string; call: string; payload?: string }[] = [
+  const rows: { key: TraceKey; title: string; call: string }[] = [
     {
       key: "identify_lead",
       title: "Saved as a lead",
       call: `${endpoints.identify.method} ${endpoints.identify.url}`,
-      payload: "email, email_verified: false",
     },
     {
       key: "signup_started",
@@ -156,7 +163,6 @@ export function SignupTrace({
       key: "identify",
       title: "Saved as a customer",
       call: `${endpoints.identify.method} ${endpoints.identify.url}`,
-      payload: "email, email_verified: true, created_at",
     },
     {
       key: "signed_up",
@@ -178,7 +184,6 @@ export function SignupTrace({
   const railSteps: RailStep[] = rows.map((row) => {
     const record = readStep(steps, row.key);
     const view = stepView(record, emailReady);
-    const at = record ? new Date(record.at) : null;
     return {
       key: row.key,
       title: row.title,
@@ -189,20 +194,7 @@ export function SignupTrace({
           <span className="block font-mono text-[0.8125rem] leading-5 break-words text-faint">
             <BreakableUrl url={row.call} />
           </span>
-          {row.payload ? (
-            <span className="block font-mono text-[0.8125rem] leading-5 text-faint">
-              {row.payload}
-            </span>
-          ) : null}
           {view.note ? <span className="mt-1 block">{view.note}</span> : null}
-          {at && !Number.isNaN(at.getTime()) && record?.status !== "pending" ? (
-            <time
-              dateTime={at.toISOString()}
-              className="mt-0.5 block text-xs text-faint tabular-nums"
-            >
-              {at.toISOString().replace("T", " ").slice(0, 19)} UTC
-            </time>
-          ) : null}
         </>
       ),
     };

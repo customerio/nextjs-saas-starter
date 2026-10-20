@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## This project
 
-A Next.js SaaS starter: Auth.js email magic links, Neon Postgres (Drizzle), and Customer.io (server SDK + browser SDK). "Acme" is a placeholder brand; Customer.io appears only as "Powered by Customer.io" and on `/status`.
+A Next.js SaaS starter: Auth.js email magic links, Neon Postgres (Drizzle), and Customer.io (server SDK + browser SDK). "Acme" is a placeholder brand; Customer.io appears only as "Powered by Customer.io" and on the owner-only `/status`. Do not explain the template in the UI; that belongs in the README.
 
 ### Rules
 
@@ -23,6 +23,8 @@ A Next.js SaaS starter: Auth.js email magic links, Neon Postgres (Drizzle), and 
 - The signup runs once, guarded by `claimSignup()` (an atomic UPDATE). Keep that guard if you change the flow.
 - Every email send goes through `recordSendOutcome()` so email readiness stays current.
 - The sign-in link may be shown on a page only when `mayRevealLink()` allows it (Vercel Preview, email not sent). Never in Production.
+- Setup details (checklist, DNS steps, "Check again", env var presence) are owner-only: gate with `ownerAccess()` / `ownerAccessFor()`. Public pages show at most `visitorNotice()`.
+- One font family (Figtree via `next/font`), mono only for code. No condensed display faces, no heavy weights.
 - Schema changes: edit `lib/db/schema.ts`, run `pnpm db:generate`, commit the SQL in `drizzle/`.
 
 ### Checks

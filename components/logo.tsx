@@ -11,11 +11,12 @@ export function AcmeMark({ className }: { className?: string }) {
   );
 }
 
-export function AcmeLogo() {
+/** The mark and the name. `compact` hides the name on phones, where the app header is tight. */
+export function AcmeLogo({ compact = false }: { compact?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-2 font-display-tight text-[1.1875rem] font-semibold tracking-[-0.01em]">
+    <span className="inline-flex items-center gap-2 text-[1.0625rem] font-semibold">
       <AcmeMark className="size-6" />
-      Acme
+      <span className={compact ? "hidden sm:inline" : undefined}>Acme</span>
     </span>
   );
 }

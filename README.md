@@ -32,9 +32,10 @@ The app is called **Acme**. That is a placeholder name and logo. Change them in 
    ```
 
 4. Vercel builds the app. The build creates the database tables first.
-5. Open your site and sign in with your email.
+5. In the Vercel project, add **`OWNER_EMAIL`** with your own email, and redeploy. Only that person can open the status page.
+6. Open your site and sign in with that email.
 
-A brand-new Customer.io workspace can't send email yet, so your first sign-in link will not arrive. That is normal. The sign-in page shows what is left to do. See [Email readiness](#email-readiness).
+A brand-new Customer.io workspace can't send email yet, so your first sign-in link will not arrive. That is normal. To get in anyway, open a **Preview** deployment, where the link shows on the page, or run the app locally. Then open `/status` to see what is left to do. See [Email readiness](#email-readiness).
 
 ## How it works
 
@@ -77,7 +78,7 @@ The code is small. Start here:
 | [`lib/customerio/`](lib/customerio)               | Config, clients, error types, email readiness, built-in emails, browser SDK config.              |
 | [`lib/db/`](lib/db)                               | Drizzle schema, queries, and the connection. SQL migrations are in [`drizzle/`](drizzle).        |
 | [`components/customerio/`](components/customerio) | The browser SDK provider and the inbox.                                                          |
-| [`app/(app)/status/`](<app/(app)/status>)         | The status page.                                                                                 |
+| [`app/(app)/status/`](<app/(app)/status>)         | The status page, for the owner only.                                                             |
 
 ### Choices, and why
 
@@ -87,25 +88,31 @@ The code is small. Start here:
 
 ## Environment variables
 
-| Variable                           | Written by               | Needed                | What it is for                                                                      |
-| ---------------------------------- | ------------------------ | --------------------- | ----------------------------------------------------------------------------------- |
-| `AUTH_SECRET`                      | You (Deploy Button asks) | Yes                   | Signs Auth.js cookies and hashes link tokens.                                       |
-| `DATABASE_URL`                     | Neon                     | Yes                   | Pooled Postgres URL the app uses.                                                   |
-| `DATABASE_URL_UNPOOLED`            | Neon                     | Yes, for builds       | Direct Postgres URL for migrations.                                                 |
-| `CUSTOMERIO_SITE_ID`               | Customer.io              | For people and events | Track API site ID. The browser also uses it for in-app messages.                    |
-| `CUSTOMERIO_TRACK_API_KEY`         | Customer.io              | For people and events | Track API key. Server only.                                                         |
-| `CUSTOMERIO_APP_API_KEY`           | Customer.io              | For email             | App API key, send only. Production and Preview only.                                |
-| `CUSTOMERIO_WORKSPACE_ID`          | Customer.io              | No                    | Links the status page to your workspace.                                            |
-| `CUSTOMERIO_REGION`                | Customer.io              | Yes                   | `us` or `eu`. Picks the API hosts.                                                  |
-| `CUSTOMERIO_CDP_WRITE_KEY`         | Customer.io              | For the browser SDK   | Public by design. US workspaces only for now.                                       |
-| `CUSTOMERIO_FROM_EMAIL`            | You                      | No                    | Sender address. Without it, Customer.io uses your verified domain's default sender. |
-| `OWNER_EMAIL`                      | You                      | No                    | Gets a note for each new signup, and the "Check again" test email.                  |
-| `CUSTOMERIO_MAGIC_LINK_MESSAGE_ID` | You                      | No                    | Send a sign-in email you designed in Customer.io instead of the built-in one.       |
-| `CUSTOMERIO_WELCOME_MESSAGE_ID`    | You                      | No                    | Send a welcome email you designed in Customer.io instead of the built-in one.       |
+| Variable                           | Written by               | Needed                | What it is for                                                                                 |
+| ---------------------------------- | ------------------------ | --------------------- | ---------------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`                      | You (Deploy Button asks) | Yes                   | Signs Auth.js cookies and hashes link tokens.                                                  |
+| `DATABASE_URL`                     | Neon                     | Yes                   | Pooled Postgres URL the app uses.                                                              |
+| `DATABASE_URL_UNPOOLED`            | Neon                     | Yes, for builds       | Direct Postgres URL for migrations.                                                            |
+| `CUSTOMERIO_SITE_ID`               | Customer.io              | For people and events | Track API site ID. The browser also uses it for in-app messages.                               |
+| `CUSTOMERIO_TRACK_API_KEY`         | Customer.io              | For people and events | Track API key. Server only.                                                                    |
+| `CUSTOMERIO_APP_API_KEY`           | Customer.io              | For email             | App API key, send only. Production and Preview only.                                           |
+| `CUSTOMERIO_WORKSPACE_ID`          | Customer.io              | No                    | Links the status page to your workspace.                                                       |
+| `CUSTOMERIO_REGION`                | Customer.io              | Yes                   | `us` or `eu`. Picks the API hosts.                                                             |
+| `CUSTOMERIO_CDP_WRITE_KEY`         | Customer.io              | For the browser SDK   | Public by design. US workspaces only for now.                                                  |
+| `CUSTOMERIO_FROM_EMAIL`            | You                      | No                    | Sender address. Without it, Customer.io uses your verified domain's default sender.            |
+| `OWNER_EMAIL`                      | You                      | Yes, for `/status`    | The owner: the only person who can open the status page. Also gets a note for each new signup. |
+| `CUSTOMERIO_MAGIC_LINK_MESSAGE_ID` | You                      | No                    | Send a sign-in email you designed in Customer.io instead of the built-in one.                  |
+| `CUSTOMERIO_WELCOME_MESSAGE_ID`    | You                      | No                    | Send a welcome email you designed in Customer.io instead of the built-in one.                  |
 
 Neon also writes `POSTGRES_URL` and `POSTGRES_URL_NON_POOLING`. The app accepts them if the `DATABASE_URL*` names are missing.
 
-Every variable is explained in [`.env.example`](.env.example). The **status page** (`/status`, after you sign in) shows which ones are set, never their values.
+Every variable is explained in [`.env.example`](.env.example). The **status page** (`/status`) shows which ones are set, never their values.
+
+## The status page
+
+`/status` is for the owner: the signed-in person whose email is `OWNER_EMAIL`. Everyone else gets a 404. Without `OWNER_EMAIL`, local dev lets any signed-in person in; a deployed site shows a short note asking you to set it.
+
+It shows email readiness with the setup checklist and **Check again**, whether the browser SDK loaded, what was sent to Customer.io when you signed up, and which variables are set.
 
 ## Email readiness
 
@@ -117,11 +124,12 @@ A new Customer.io workspace can't send email until three things are done. Custom
 
 The app never asks Customer.io about this directly. Every email it sends is also the check: the answer is stored in one database row (`email_status`). While email is blocked:
 
-- The sign-in page and the status page show the checklist, with the open step marked.
-- People can still ask for a link. They are saved, and Customer.io gets `signup_started`. The page tells them their email is saved and to come back for a new link soon.
+- Visitors see one calm line on the sign-in form ("Sign-in emails aren't on yet. Try again soon."). No setup details are ever shown to them.
+- People can still ask for a link. They are saved, and Customer.io gets `signup_started`. The page tells them their email is saved and to try again soon.
+- The status page shows you the checklist, with the open step marked.
 - **You can still get in.** In local dev, the link prints in your terminal. On a Vercel **Preview** deployment, the link shows on the page with a "Preview only" label (only for `OWNER_EMAIL`, if you set it). Production never shows it. Previews are behind Vercel Authentication by default.
 
-**Check again** sends one short test email to `OWNER_EMAIL` (or to you, on the status page, if it is not set) and stores the answer. While email is blocked, nothing arrives. The first time it works, you get one "Email works" note and the checklist goes away. It waits 30 seconds between checks.
+**Check again** (on the status page, owner only) sends one short test email to `OWNER_EMAIL` and stores the answer. While email is blocked, nothing arrives. The first time it works, you get one "Email works" note and the checklist goes away. It waits 30 seconds between checks.
 
 Once any send works, the state flips to ready by itself. Emails that failed before that (like your own welcome email) are not sent again; the status page shows them as "Not sent".
 
@@ -175,6 +183,8 @@ pnpm db:migrate
 pnpm dev
 ```
 
+`pnpm db:migrate` reads `.env.local` like `pnpm dev` does, so the same file sets up both.
+
 Open http://localhost:3000 and sign in. `CUSTOMERIO_APP_API_KEY` is only in Production and Preview, so locally no email goes out: **your sign-in link prints in the terminal** that runs `pnpm dev`.
 
 Without any `CUSTOMERIO_*` variables the app still runs. It skips the Customer.io calls, and the status page says what is missing.
@@ -197,11 +207,11 @@ pnpm screenshots   # every page, light and dark, desktop and phone
 ## Make it yours
 
 - **Name and logo:** `lib/site.ts`, `components/logo.tsx`, `app/icon.svg`.
-- **Colors and type:** the tokens at the top of `app/globals.css`.
+- **Colors:** the tokens at the top of `app/globals.css`.
 - **Emails:** edit `lib/customerio/emails.ts`, or design them in Customer.io and set `CUSTOMERIO_MAGIC_LINK_MESSAGE_ID` / `CUSTOMERIO_WELCOME_MESSAGE_ID`. Your message gets `message_data` with `url`, `app_name`, `expires_in_minutes` (sign-in) or `app_name`, `dashboard_url` (welcome).
 - **Your product:** start in `app/(app)/dashboard/page.tsx`.
 - **Tables:** add them to `lib/db/schema.ts`, run `pnpm db:generate`, and commit the new file in `drizzle/`.
-- **Before launch:** the status page is for you. Remove it, or limit it to `OWNER_EMAIL`.
+- **Fonts:** Figtree, loaded with `next/font` in `app/layout.tsx`.
 
 ## License
 

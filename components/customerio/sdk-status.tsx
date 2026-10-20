@@ -2,38 +2,33 @@
 
 import { useCustomerio, type SdkStatus } from "./browser-sdk";
 
-const TEXT: Record<SdkStatus, { label: string; tone: string; note: string }> = {
+const TEXT: Record<SdkStatus, { label: string; tone: string; title: string }> = {
   ready: {
     label: "Loaded",
     tone: "text-ok",
-    note: "Page views and identify are going to Customer.io from this browser.",
+    title: "Page views and identify are going to Customer.io from this browser.",
   },
   loading: {
     label: "Loading…",
     tone: "text-muted",
-    note: "Fetching your settings from Customer.io.",
+    title: "Fetching your settings from Customer.io.",
   },
   failed: {
-    label: "Blocked",
-    tone: "text-danger",
-    note: "The SDK didn’t load in this browser. An ad blocker is the usual reason. The app works the same.",
+    label: "Blocked here",
+    tone: "text-wait",
+    title:
+      "The SDK didn’t load in this browser, usually because of an ad blocker. The app works the same.",
   },
-  off: { label: "Off", tone: "text-faint", note: "" },
+  off: { label: "Off", tone: "text-faint", title: "" },
 };
 
-/** What the SDK is doing in this browser right now. */
+/** What the browser SDK is doing in this browser right now, as one short label. */
 export function SdkLiveStatus() {
-  const { status, inApp } = useCustomerio();
+  const { status } = useCustomerio();
   const text = TEXT[status];
   return (
-    <div aria-live="polite">
-      <p className={`font-medium ${text.tone}`}>{text.label}</p>
-      {text.note ? <p className="mt-0.5 text-sm leading-6 text-muted">{text.note}</p> : null}
-      {status === "ready" && !inApp ? (
-        <p className="mt-1 text-sm leading-6 text-muted">
-          In-app messages are off because the site ID is missing.
-        </p>
-      ) : null}
-    </div>
+    <span aria-live="polite" className={text.tone} title={text.title || undefined}>
+      {text.label}
+    </span>
   );
 }
