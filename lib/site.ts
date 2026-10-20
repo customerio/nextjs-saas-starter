@@ -4,7 +4,13 @@
  */
 export const site = {
   name: "Acme",
-  description: "Acme helps your team keep track of the work that matters. A starter for your SaaS.",
+  /**
+   * The app's one example resource. Change these words to rename it
+   * everywhere in the UI ("project" → "board", "space", "workspace", …).
+   * The database table stays `projects` unless you rename it too.
+   */
+  resource: { singular: "project", plural: "projects" },
+  description: "Sign up with your email and get started in a minute.",
   repoUrl: "https://github.com/customerio/vercel-nextjs-starter",
 };
 
@@ -20,4 +26,9 @@ export function siteUrl(): string {
   }
   if (env.VERCEL_URL) return `https://${env.VERCEL_URL}`;
   return `http://localhost:${env.PORT ?? 3000}`;
+}
+
+/** "project" → "Project". For labels at the start of a sentence. */
+export function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
 }

@@ -7,7 +7,7 @@ import { site } from "@/lib/site";
 import { AcmeLogo, AcmeMark } from "./logo";
 import { ThemeSwitcher } from "./theme-switcher";
 
-export function MarketingHeader({ children }: { children?: ReactNode }) {
+export function MarketingHeader({ children, nav }: { children?: ReactNode; nav?: ReactNode }) {
   return (
     <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
       <Link
@@ -18,6 +18,7 @@ export function MarketingHeader({ children }: { children?: ReactNode }) {
         <AcmeLogo />
       </Link>
       <div className="flex items-center gap-1">
+        {nav}
         <ThemeSwitcher />
         {children ? (
           <nav aria-label="Account" className="flex items-center gap-1">
