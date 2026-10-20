@@ -11,7 +11,7 @@ export const site = {
    */
   resource: { singular: "project", plural: "projects" },
   description: "Sign up with your email and get started in a minute.",
-  repoUrl: "https://github.com/customerio/vercel-nextjs-starter",
+  repoUrl: "https://github.com/customerio/nextjs-saas-starter",
 };
 
 /**
