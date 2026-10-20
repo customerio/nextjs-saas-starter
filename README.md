@@ -11,8 +11,6 @@ The app is called **Acme**. That is a placeholder name and logo. Change them in 
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcustomerio%2Fvercel-nextjs-starter&integration-ids=oac_87hWAXW9Pa4LMmmqpHzszxtH&products=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%2C%22protocol%22%3A%22storage%22%7D%5D&env=AUTH_SECRET&envDescription=A%20random%20secret%20for%20Auth.js.%20Run%20%60npx%20auth%20secret%60%20or%20%60openssl%20rand%20-base64%2033%60%20and%20paste%20the%20value.&envLink=https%3A%2F%2Fauthjs.dev%2Fgetting-started%2Finstallation%23setup-environment&project-name=acme-saas&repository-name=acme-saas)
 
-**Demo:** `DEMO_URL_PLACEHOLDER`
-
 | Landing page                                          | Sign-in, before email is set up                                              |
 | ----------------------------------------------------- | ---------------------------------------------------------------------------- |
 | ![Landing page](docs/screenshots/landing.png)         | ![Sign-in with the email setup list](docs/screenshots/sign-in-not-ready.png) |
