@@ -7,8 +7,8 @@ import { auth } from "@/auth";
 
 /**
  * The current session, or `null`. Unlike `auth()`, this never throws, so pages
- * that work for signed-out visitors still render when Auth.js is misconfigured
- * (for example when AUTH_SECRET is missing in production).
+ * that work for signed-out visitors still render when the database or
+ * Auth.js is not set up yet.
  */
 export async function getSession(): Promise<Session | null> {
   try {

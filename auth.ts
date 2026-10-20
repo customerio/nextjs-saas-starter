@@ -1,67 +1,46 @@
-import { createHash } from "node:crypto";
+import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import NextAuth, { type DefaultSession } from "next-auth";
+import type { EmailConfig } from "next-auth/providers/email";
+import { cookies, headers } from "next/headers";
 
-import NextAuth, { CredentialsSignin, type DefaultSession, type User } from "next-auth";
-import type { Account } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import GitHub from "next-auth/providers/github";
-
-import { defaultDeps, identifyPerson, recordSignup, type Person } from "@/lib/customerio";
-import { readSignupRecord, saveSignupRecord } from "@/lib/signup-record";
-import { site, siteUrl } from "@/lib/site";
+import { getDb } from "@/lib/db";
+import { accounts, sessions, users, verificationTokens } from "@/lib/db/schema";
+import { defaultDeps } from "@/lib/flows/default-deps";
+import { handleLinkRequest } from "@/lib/flows/link-request";
+import { writeLinkRequestCookie } from "@/lib/flows/link-request-cookie";
+import { checkLinkRequest, clientIp } from "@/lib/flows/rate-limit";
+import { handleSignIn } from "@/lib/flows/signup";
 
 declare module "next-auth" {
   interface Session {
-    user: { id: string; method: string } & DefaultSession["user"];
+    user: { id: string } & DefaultSession["user"];
   }
 }
 
-/**
- * Which ways to sign in are turned on. Read from env so a deploy works with no
- * extra setup, and GitHub turns on when you add its two variables.
- */
-export function authSetup() {
-  const env = process.env;
-  const github = Boolean(env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET);
-  // Demo sign-in is on until you add GitHub, unless you say otherwise.
-  const demo = env.AUTH_DEMO_SIGN_IN ? env.AUTH_DEMO_SIGN_IN === "true" : !github;
-  return { github, demo, hasSecret: Boolean(env.AUTH_SECRET) };
-}
-
-const setup = authSetup();
-
-class InvalidDemoDetails extends CredentialsSignin {
-  code = "invalid_details";
-}
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Sign-in links work for this long, and only once. */
+export const LINK_MAX_AGE_SECONDS = 15 * 60;
 
 /**
- * Demo sign-in: a name and an email, no password, no database.
- * Anyone can sign in as any email, so turn it off before real users arrive
- * (AUTH_DEMO_SIGN_IN=false). It exists so a fresh deploy works in one click.
+ * Email sign-in, sent through Customer.io instead of SMTP. Auth.js makes the
+ * token and the link, stores a hash of the token, and calls
+ * `sendVerificationRequest`; we send the email and record what happened.
  */
-const demoProvider = Credentials({
-  id: "demo",
-  name: "Demo account",
-  credentials: { name: { label: "Name" }, email: { label: "Email", type: "email" } },
-  authorize(credentials): User {
-    const email = String(credentials.email ?? "")
-      .trim()
-      .toLowerCase();
-    const name = String(credentials.name ?? "")
-      .trim()
-      .slice(0, 80);
-    if (!EMAIL.test(email) || email.length > 254) throw new InvalidDemoDetails();
-    const hash = createHash("sha256").update(email).digest("hex").slice(0, 20);
-    return { id: `demo-${hash}`, email, name: name || null };
+const customerioEmail: EmailConfig = {
+  id: "email",
+  type: "email",
+  name: "Email",
+  maxAge: LINK_MAX_AGE_SECONDS,
+  async sendVerificationRequest({ identifier, url, expires }) {
+    const outcome = await handleLinkRequest(defaultDeps(), { email: identifier, url, expires });
+    // Tells the "check your email" page what happened. It never holds the
+    // link, except on a Preview deployment while email cannot send yet.
+    await writeLinkRequestCookie(await cookies(), {
+      email: identifier,
+      delivery: outcome.delivery,
+      revealedUrl: outcome.revealedUrl,
+    });
   },
-});
-
-/** A stable Customer.io ID per person. Never use the email as the ID. */
-function personIdFor(user: User, account: Account): string {
-  if (account.provider === "github") return `github-${account.providerAccountId}`;
-  return user.id ?? account.providerAccountId;
-}
+};
 
 /** Your secret, from AUTH_SECRET. Local dev gets a fixed one so `pnpm dev` just works. */
 const devSecret =
@@ -69,69 +48,54 @@ const devSecret =
     ? { secret: "dev-only-secret-do-not-use-in-production-0000000000" }
     : {};
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
   ...devSecret,
-  providers: [...(setup.github ? [GitHub] : []), ...(setup.demo ? [demoProvider] : [])],
-  // No database: the session lives in an encrypted cookie.
-  session: { strategy: "jwt" },
-  pages: { signIn: "/sign-in" },
+  // The adapter is built per request so a missing DATABASE_URL shows up as a
+  // clear error on the pages that need it, not as a crash at import time.
+  adapter: DrizzleAdapter(getDb(), {
+    usersTable: users,
+    accountsTable: accounts,
+    sessionsTable: sessions,
+    verificationTokensTable: verificationTokens,
+  }),
+  providers: [customerioEmail],
+  // Database sessions: the cookie holds a random ID and the session lives in
+  // Postgres. It is the adapter's default, there is no JWT to configure, and
+  // signing out really ends the session on the server.
+  session: { strategy: "database" },
+  pages: { signIn: "/sign-in", verifyRequest: "/check-email", error: "/sign-in" },
   callbacks: {
-    jwt({ token, user, account }) {
-      // `user` and `account` are only present on the sign-in request itself.
-      if (user && account) {
-        token.sub = personIdFor(user, account);
-        token.method = account.provider;
-      }
-      return token;
+    /**
+     * Runs before a link is made. We use it for the rate limit, so it holds
+     * for the form and for anyone posting to /api/auth directly.
+     */
+    async signIn({ user, email }) {
+      if (!email?.verificationRequest || !user.email) return true;
+      const decision = await checkLinkRequest(
+        getDb(),
+        { email: user.email, ip: clientIp(await headers()) },
+        new Date(),
+      );
+      return decision.allowed ? true : "/sign-in?error=rate_limited";
     },
-    session({ session, token }) {
-      session.user.id = token.sub ?? "";
-      session.user.method = typeof token.method === "string" ? token.method : "unknown";
+    session({ session, user }) {
+      session.user.id = user.id;
       return session;
     },
   },
   events: {
     /**
-     * Runs on the server after every successful sign-in. Auth.js waits for it,
-     * so the dashboard can show the result right away. Nothing in here throws:
-     * Customer.io trouble never blocks sign-in.
+     * Runs after every successful sign-in. The first one with a verified email
+     * is the signup: identify, `signed_up`, welcome email, owner note. Nothing
+     * in here throws or waits on Customer.io.
      */
     async signIn({ user, account }) {
-      if (!account || !user.email) return;
-      const person: Person = {
-        id: personIdFor(user, account),
-        email: user.email,
-        name: user.name ?? null,
-        method: account.provider,
-      };
-      const deps = defaultDeps({ appName: site.name, dashboardUrl: `${siteUrl()}/dashboard` });
-
-      if (await readSignupRecord(person.id)) {
-        // Returning person: keep their name and email fresh in Customer.io.
-        const result = await identifyPerson(person, deps, { isNew: false });
-        if (result.status === "failed") {
-          console.warn(
-            "[customerio] identify failed:",
-            result.failure.kind,
-            result.failure.message,
-          );
-        }
-        return;
+      if (account?.type !== "email" || !user.id || !user.email) return;
+      try {
+        await handleSignIn(defaultDeps(), { id: user.id, email: user.email });
+      } catch (error) {
+        console.error("[signup] could not record the signup:", error);
       }
-
-      const report = await recordSignup(person, deps);
-      for (const [step, result] of Object.entries(report)) {
-        if (result.status === "failed") {
-          console.warn(`[customerio] ${step} failed:`, result.failure.kind, result.failure.message);
-        }
-      }
-      await saveSignupRecord({
-        v: 1,
-        personId: person.id,
-        region: deps.config.region,
-        signedUpAt: deps.now().toISOString(),
-        report,
-      });
     },
   },
-});
+}));

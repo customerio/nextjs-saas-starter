@@ -21,23 +21,28 @@ describe("classifyError: a new workspace that cannot send yet", () => {
   it.each([
     [
       403,
-      "Account owner's email address is not confirmed. Please confirm it to start sending.",
+      "Account owner's email address is not confirmed. Please confirm your email address to send messages.",
       "owner_email_unconfirmed",
     ],
     [
       403,
-      "Account is not yet approved for sending. Complete your account setup to start sending.",
+      "Account is not yet approved for sending.  Verify your account (https://customer.io/docs/account-verification) to send messages.",
       "account_not_approved",
     ],
     [
       400,
-      'No "from" address was provided and this workspace has no verified sending domain.',
+      'No "from" address was provided and this workspace has no verified sending domain to use as a default. Verify a sending domain (https://customer.io/docs/authentication) or include a "from" address from a verified domain.',
       "no_from_address",
     ],
-    [400, '"from" address domain example.com has not been verified', "from_domain_unverified"],
+    [
+      400,
+      '"from" address domain example.com has not been verified. Verify your domain (https://customer.io/docs/authentication) to use this "from" address.',
+      "from_domain_unverified",
+    ],
+    [403, 'Workspace is set to "Do Not Send" in account workspace settings.', "delivery_disabled"],
   ])("HTTP %i %j is %s", (status, message, kind) => {
     const failure = classifyError(apiError(status, message));
-    expect(failure).toEqual({ kind, status, message });
+    expect(failure).toEqual({ kind, status, message: message.replace(/\s+/g, " ") });
     expect(isEmailSetupFailure(failure)).toBe(true);
     expect(isTemporaryFailure(failure)).toBe(false);
   });

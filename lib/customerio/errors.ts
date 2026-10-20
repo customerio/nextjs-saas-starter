@@ -5,7 +5,8 @@ import { CustomerIORequestError } from "customerio-node";
  *
  * The most common failure in a new workspace is not a bug: Customer.io does
  * not send email until the account owner confirms their address, the account
- * is approved, and a sending domain is verified. Those cases get their own
+ * is approved, and a sending domain is verified. It checks them in that
+ * order, so the error always names the first step that is still open. Those cases get their own
  * kinds so the UI can show the exact next step.
  */
 export type FailureKind =
@@ -17,9 +18,11 @@ export type FailureKind =
   | "no_from_address"
   /** 400: the `from` address uses a domain that is not verified. */
   | "from_domain_unverified"
+  /** 403: the workspace is set to "Do Not Send" in its settings. */
+  | "delivery_disabled"
   /** 401: the key is wrong, revoked, or for another region. */
   | "unauthorized"
-  /** 404: CUSTOMERIO_WELCOME_MESSAGE_ID does not match a transactional message. */
+  /** 404: a *_MESSAGE_ID variable does not match a transactional message. */
   | "message_not_found"
   /** 429: too many requests. Safe to try again later. */
   | "rate_limited"
@@ -47,6 +50,7 @@ const EMAIL_SETUP_KINDS: ReadonlySet<FailureKind> = new Set([
   "account_not_approved",
   "no_from_address",
   "from_domain_unverified",
+  "delivery_disabled",
 ]);
 
 export function isEmailSetupFailure(failure: CustomerioFailure): boolean {
@@ -86,6 +90,7 @@ function kindFromResponse(status: number, text: string): FailureKind {
   if (status === 403) {
     if (lower.includes("email address is not confirmed")) return "owner_email_unconfirmed";
     if (lower.includes("not yet approved for sending")) return "account_not_approved";
+    if (lower.includes("do not send")) return "delivery_disabled";
   }
   if (status === 400) {
     if (lower.includes('no "from" address')) return "no_from_address";

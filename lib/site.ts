@@ -1,7 +1,10 @@
-/** Rename these when you make the starter your own. */
+/**
+ * Your app's name and copy. "Acme" is a placeholder: change it here, then
+ * swap components/logo.tsx and app/icon.svg for your own mark.
+ */
 export const site = {
-  name: "Next.js Starter",
-  description: "Sign-in, a dashboard, and Customer.io messaging, ready to deploy on Vercel.",
+  name: "Acme",
+  description: "Acme helps your team keep track of the work that matters. A starter for your SaaS.",
   repoUrl: "https://github.com/customerio/vercel-nextjs-starter",
 };
 

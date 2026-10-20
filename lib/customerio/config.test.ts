@@ -72,7 +72,42 @@ describe("readCustomerioConfig", () => {
   });
 });
 
+describe("new optional variables", () => {
+  it("reads the browser key and site ID, and drops them for an invalid region", () => {
+    const env = { CUSTOMERIO_CDP_WRITE_KEY: "wk", CUSTOMERIO_SITE_ID: "site" };
+    expect(readCustomerioConfig(env)).toMatchObject({ cdpWriteKey: "wk", siteId: "site" });
+    expect(readCustomerioConfig({ ...env, CUSTOMERIO_REGION: "mars" })).toMatchObject({
+      cdpWriteKey: null,
+      siteId: null,
+    });
+  });
+
+  it("lowercases OWNER_EMAIL and rejects a value that is not an address", () => {
+    expect(readCustomerioConfig({ OWNER_EMAIL: " Owner@Acme.TEST " }).ownerEmail).toBe(
+      "owner@acme.test",
+    );
+    const config = readCustomerioConfig({ OWNER_EMAIL: "Owner <owner@acme.test>" });
+    expect(config.ownerEmail).toBeNull();
+    expect(config.problems[0]?.variable).toBe("OWNER_EMAIL");
+  });
+
+  it("reads the two message IDs", () => {
+    expect(
+      readCustomerioConfig({
+        CUSTOMERIO_MAGIC_LINK_MESSAGE_ID: "3",
+        CUSTOMERIO_WELCOME_MESSAGE_ID: "4",
+      }),
+    ).toMatchObject({ magicLinkMessageId: "3", welcomeMessageId: "4" });
+  });
+});
+
 describe("describeEnv", () => {
+  it("lists every variable with who writes it", () => {
+    const rows = describeEnv({});
+    expect(rows.map((row) => row.info.setBy)).toContain("neon");
+    expect(rows.find((row) => row.info.name === "AUTH_SECRET")?.info.setBy).toBe("you");
+  });
+
   it("reports which variables are set, never their values", () => {
     const rows = describeEnv({ CUSTOMERIO_TRACK_API_KEY: "secret-value" });
     const track = rows.find((row) => row.info.name === "CUSTOMERIO_TRACK_API_KEY");
