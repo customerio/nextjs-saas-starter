@@ -1,147 +1,107 @@
-import { authSetup } from "@/auth";
 import { ButtonLink } from "@/components/button";
-import { SiteHeader } from "@/components/site-header";
-import { SignupTrace } from "@/components/signup-trace";
-import { getCustomerioConfig, signupEndpoints, SIGNED_UP_EVENT } from "@/lib/customerio";
-import { links } from "@/lib/links";
+import { Rail } from "@/components/rail";
+import { MarketingFooter, MarketingHeader } from "@/components/site-chrome";
 import { getSession } from "@/lib/session";
-import { site } from "@/lib/site";
 
-const FEATURES = [
+import { LinkForm } from "./sign-in/link-form";
+
+const FLOW = [
   {
-    title: "Sign-in with Auth.js",
-    body: "GitHub sign-in when you add an OAuth app. Until then, a demo sign-in lets you try everything with no setup.",
+    key: "ask",
+    title: "They ask for a sign-in link",
+    body: "No password to make up. Acme saves their address right away, so you know who tried.",
   },
   {
-    title: "Customer.io on the server only",
-    body: "Keys stay on the server. Every call has a timeout and returns a typed result, so a Customer.io problem never breaks sign-up.",
+    key: "open",
+    title: "They open it",
+    body: "Their email is confirmed, and their account exists. That moment is the signup.",
   },
   {
-    title: "Works before email is ready",
-    body: "A new Customer.io workspace cannot send email yet. Sign-up still works, and the dashboard lists what to finish.",
+    key: "welcome",
+    title: "They hear from you",
+    body: "A welcome email arrives within seconds, and you get a note about your new user.",
   },
   {
-    title: "No database",
-    body: "Sessions live in an encrypted cookie. Add a database when your app needs one.",
+    key: "inbox",
+    title: "They see you in the app",
+    body: "Messages and an inbox inside Acme, for news, tips, and anything else worth saying.",
   },
 ];
 
 export default async function Home() {
   const session = await getSession();
-  const { demo } = authSetup();
-  const config = getCustomerioConfig();
-  const endpoints = signupEndpoints(config.region);
 
   return (
-    <>
-      <SiteHeader>
+    <div className="flex min-h-dvh flex-col">
+      <MarketingHeader>
         {session ? (
           <ButtonLink href="/dashboard" variant="secondary">
-            Dashboard
+            Go to dashboard
           </ButtonLink>
         ) : (
-          <ButtonLink href="/sign-in" variant="secondary">
+          <ButtonLink href="/sign-in" variant="quiet">
             Sign in
           </ButtonLink>
         )}
-      </SiteHeader>
+      </MarketingHeader>
 
-      <main id="main" className="mx-auto w-full max-w-6xl px-5 sm:px-8">
-        <section className="grid items-center gap-x-16 gap-y-12 pt-10 pb-20 sm:pt-16 lg:grid-cols-[1.1fr_1fr] lg:pt-24 lg:pb-28">
-          <div>
-            <h1 className="font-display-wide text-display font-semibold">
-              Every signup lands in Customer.io.
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-5 sm:px-8">
+        <section className="grid items-start gap-x-16 gap-y-10 pt-8 pb-20 sm:pt-14 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:pt-24 lg:pb-28">
+          <div className="lg:pt-6">
+            <h1 className="font-display-tight text-display font-semibold">
+              Acme is ready for its first customer.
             </h1>
-            <p className="mt-6 max-w-[34rem] text-lg leading-8 text-muted">
-              A Next.js starter with sign-in, a dashboard, and Customer.io set up on the server.
-              When someone signs up, they are added as a person, a{" "}
-              <code className="font-mono text-[0.95em] text-ink">{SIGNED_UP_EVENT}</code> event is
-              recorded, and a welcome email goes out.
+            <p className="mt-6 max-w-[33rem] text-lg leading-8 text-muted">
+              Email sign-in, a dashboard, and messages that reach people from their first minute. It
+              all works today. Rename it, then build the part only you can build.
             </p>
-            <div className="mt-9 flex flex-wrap items-center gap-3">
-              {session ? (
-                <ButtonLink href="/dashboard">Open your dashboard</ButtonLink>
-              ) : (
-                <ButtonLink href="/sign-in">Create an account</ButtonLink>
-              )}
-              <ButtonLink href={site.repoUrl} variant="secondary">
-                Get the code
-              </ButtonLink>
-            </div>
-            {demo && !session ? (
-              <p className="mt-4 text-sm text-faint">Demo sign-in is on. No password needed.</p>
-            ) : null}
           </div>
 
-          <SignupTrace
-            title="What happens on signup"
-            aside={config.region === "eu" ? "EU region" : "US region"}
-            steps={[
-              {
-                title: "Add the person",
-                ...endpoints.identify,
-                payload: "id, email, name, created_at",
-                state: "planned",
-              },
-              {
-                title: "Record the event",
-                ...endpoints.event,
-                payload: `name: "${SIGNED_UP_EVENT}"`,
-                state: "planned",
-              },
-              {
-                title: "Send the welcome email",
-                ...endpoints.email,
-                payload: "to, identifiers, subject, body",
-                state: "planned",
-              },
-            ]}
-            footer={
+          <div className="rounded-2xl bg-surface p-5 shadow-raised sm:p-7">
+            {session ? (
+              <div>
+                <h2 className="font-display-tight text-xl font-semibold">You’re signed in</h2>
+                <p className="mt-1.5 text-muted">Pick up where you left off.</p>
+                <ButtonLink href="/dashboard" className="mt-5 min-h-12 w-full">
+                  Go to dashboard
+                </ButtonLink>
+              </div>
+            ) : (
               <>
-                All three run on the server, inside the Auth.js sign-in event. See{" "}
-                <code className="font-mono text-[0.8125rem] text-ink">lib/customerio</code>.
+                <h2 className="font-display-tight text-xl font-semibold">Start with your email</h2>
+                <p className="mt-1.5 mb-5 text-muted">We’ll send a link that signs you in.</p>
+                <LinkForm idPrefix="hero" />
               </>
-            }
-          />
+            )}
+          </div>
         </section>
 
         <section
-          aria-labelledby="inside"
-          className="grid gap-x-16 gap-y-8 border-t border-line py-16 lg:grid-cols-[1fr_2fr]"
+          aria-labelledby="flow"
+          className="grid gap-x-16 gap-y-8 border-t border-line py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:py-20"
         >
-          <h2 id="inside" className="font-display-wide text-title font-semibold">
-            What you get
-          </h2>
-          <dl className="grid gap-x-10 gap-y-8 sm:grid-cols-2">
-            {FEATURES.map((feature) => (
-              <div key={feature.title}>
-                <dt className="font-medium">{feature.title}</dt>
-                <dd className="mt-2 leading-7 text-muted">{feature.body}</dd>
-              </div>
-            ))}
-          </dl>
+          <div>
+            <h2 id="flow" className="font-display-tight text-title font-semibold">
+              From a stranger to a customer in one minute
+            </h2>
+            <p className="mt-4 max-w-[28rem] leading-7 text-muted">
+              Every step below already happens in Acme. Each one is recorded, so you can build on it
+              later.
+            </p>
+          </div>
+          <Rail
+            numbered
+            steps={FLOW.map((step) => ({
+              key: step.key,
+              title: step.title,
+              state: "neutral" as const,
+              children: <p className="max-w-prose text-[0.9375rem] leading-7">{step.body}</p>,
+            }))}
+          />
         </section>
       </main>
 
-      <footer className="mx-auto w-full max-w-6xl px-5 text-sm text-muted sm:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line py-8">
-          <p>MIT License. Made by Customer.io.</p>
-          <nav aria-label="Footer" className="-mx-2 flex flex-wrap">
-            <a
-              className="inline-flex min-h-11 items-center rounded-md px-2 hover:text-ink"
-              href={links.docs}
-            >
-              Customer.io docs
-            </a>
-            <a
-              className="inline-flex min-h-11 items-center rounded-md px-2 hover:text-ink"
-              href={site.repoUrl}
-            >
-              Source on GitHub
-            </a>
-          </nav>
-        </div>
-      </footer>
-    </>
+      <MarketingFooter />
+    </div>
   );
 }

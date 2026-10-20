@@ -1,57 +1,58 @@
 @import "tailwindcss";
 
 /*
- * Colors come from the Customer.io palette: forest ink, a pale green paper,
- * and lime as the one highlight. Dark mode keeps the forest as the canvas.
+ * Acme's palette. A cool paper, near-black ink, and one accent (signal
+ * yellow) that only marks the brand and the "current" step. Replace these
+ * tokens to rebrand; components only use the names below.
  */
 :root {
-  --canvas: #f3f6f4;
+  --canvas: #f4f5f2;
   --surface: #ffffff;
-  --sunken: #e9efec;
-  --ink: #0b353b;
-  --muted: #4b6366;
-  --faint: #566e71;
-  --line: rgb(11 53 59 / 0.11);
-  --line-strong: rgb(11 53 59 / 0.2);
-  --primary: #0b353b;
-  --primary-hover: #0e464d;
+  --sunken: #eceee9;
+  --ink: #17191c;
+  --muted: #5d636a;
+  --faint: #6b7178;
+  --line: rgb(23 25 28 / 0.09);
+  --line-strong: rgb(23 25 28 / 0.18);
+  --primary: #17191c;
+  --primary-hover: #2c3036;
   --on-primary: #ffffff;
-  --highlight: #b8ff99;
-  --on-highlight: #0b353b;
-  --ok: #0e7a57;
-  --warn: #8a6410;
-  --warn-surface: #fdf6df;
-  --warn-line: rgb(138 100 16 / 0.25);
-  --danger: #b51e1e;
-  --code-ink: #0b353b;
-  --shadow:
-    0 1px 1px rgb(11 53 59 / 0.04), 0 2px 6px -2px rgb(11 53 59 / 0.06),
-    0 12px 32px -12px rgb(11 53 59 / 0.12);
+  --accent: #f0b90b;
+  --on-accent: #17191c;
+  --ok: #18794e;
+  --wait: #8a5d00;
+  --wait-surface: #fbf4dc;
+  --danger: #b42318;
+  --raised:
+    0 0 0 1px rgb(23 25 28 / 0.06), 0 1px 2px rgb(23 25 28 / 0.05),
+    0 6px 16px -8px rgb(23 25 28 / 0.12);
+  --overlay:
+    0 0 0 1px rgb(23 25 28 / 0.08), 0 4px 8px -2px rgb(23 25 28 / 0.08),
+    0 18px 40px -12px rgb(23 25 28 / 0.22);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --canvas: #061f22;
-    --surface: #0a2a2e;
-    --sunken: #05191b;
-    --ink: #e6f2ee;
-    --muted: #9fb8b5;
-    --faint: #86a19e;
-    --line: #143e43;
-    --line-strong: #1d5157;
-    --primary: #b8ff99;
-    --primary-hover: #cbffb3;
-    --on-primary: #08272b;
-    --highlight: #a3e887;
-    --on-highlight: #08272b;
-    --ok: #6fdcaf;
-    --warn: #f2cf73;
-    --warn-surface: #1f2a17;
-    --warn-line: #3b4a22;
-    --danger: #ff8b8b;
-    --code-ink: #d9efe6;
-    --shadow: 0 0 0 1px #0f353a, 0 12px 32px -12px rgb(0 0 0 / 0.5);
+    --canvas: #111315;
+    --surface: #1a1d21;
+    --sunken: #15181b;
+    --ink: #eceded;
+    --muted: #a2a8ae;
+    --faint: #8d949b;
+    --line: #262a2f;
+    --line-strong: #353a41;
+    --primary: #eceded;
+    --primary-hover: #ffffff;
+    --on-primary: #141618;
+    --accent: #e6b52b;
+    --on-accent: #141618;
+    --ok: #5cc795;
+    --wait: #e2b54f;
+    --wait-surface: #221d10;
+    --danger: #ff8a7a;
+    --raised: 0 0 0 1px #2a2e34;
+    --overlay: 0 0 0 1px #30353b, 0 18px 40px -12px rgb(0 0 0 / 0.6);
     color-scheme: dark;
   }
 }
@@ -72,23 +73,23 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-on-primary: var(--on-primary);
-  --color-highlight: var(--highlight);
-  --color-on-highlight: var(--on-highlight);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
   --color-ok: var(--ok);
-  --color-warn: var(--warn);
-  --color-warn-surface: var(--warn-surface);
-  --color-warn-line: var(--warn-line);
+  --color-wait: var(--wait);
+  --color-wait-surface: var(--wait-surface);
   --color-danger: var(--danger);
-  --color-code-ink: var(--code-ink);
-  --shadow-card: var(--shadow);
+  --shadow-raised: var(--raised);
+  --shadow-overlay: var(--overlay);
 
-  /* Type scale. Display sizes use the condensed width of Bricolage. */
-  --text-display: clamp(2.5rem, 1.6rem + 3.6vw, 4.25rem);
+  --text-display: clamp(2.5rem, 1.7rem + 3.4vw, 4rem);
   --text-display--line-height: 1.02;
-  --text-display--letter-spacing: -0.025em;
-  --text-title: clamp(1.75rem, 1.4rem + 1.4vw, 2.25rem);
-  --text-title--line-height: 1.1;
-  --text-title--letter-spacing: -0.015em;
+  --text-display--letter-spacing: -0.03em;
+  --text-title: clamp(1.625rem, 1.35rem + 1.1vw, 2.125rem);
+  --text-title--line-height: 1.12;
+  --text-title--letter-spacing: -0.018em;
+
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 @layer base {
@@ -97,6 +98,7 @@
     -moz-osx-font-smoothing: grayscale;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
@@ -115,8 +117,8 @@
   }
 
   ::selection {
-    background: color-mix(in oklch, var(--highlight) 70%, transparent);
-    color: var(--on-highlight);
+    background: color-mix(in oklch, var(--accent) 45%, transparent);
+    color: var(--ink);
   }
 
   :focus-visible {
@@ -127,8 +129,14 @@
   a,
   button,
   input,
-  label {
+  label,
+  summary {
     touch-action: manipulation;
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -142,8 +150,32 @@
   }
 }
 
-@utility font-display-wide {
+@utility font-display-tight {
   font-family: var(--font-display);
-  font-stretch: 88%;
+  font-stretch: 85%;
   font-optical-sizing: auto;
+}
+
+@utility link {
+  color: var(--ink);
+  font-weight: 500;
+  text-decoration-line: underline;
+  text-decoration-color: var(--line-strong);
+  text-decoration-thickness: from-font;
+  text-underline-offset: 0.22em;
+  transition: text-decoration-color 150ms ease-out;
+  &:hover {
+    text-decoration-color: var(--ink);
+  }
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+  }
+}
+
+@utility animate-popover-in {
+  animation: popover-in 160ms var(--ease-out-quint);
 }
