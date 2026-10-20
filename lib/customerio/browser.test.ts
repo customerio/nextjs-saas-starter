@@ -26,10 +26,10 @@ describe("browser SDK config", () => {
     expect(JSON.stringify(state)).not.toMatch(/secret/);
   });
 
-  it("explains why it is off", () => {
+  it("explains why it is off, in both regions", () => {
     expect(browserSdkState(readCustomerioConfig({ CUSTOMERIO_REGION: "eu" }))).toEqual({
       enabled: false,
-      reason: "no_write_key_eu",
+      reason: "no_write_key",
     });
     expect(browserSdkState(readCustomerioConfig({}))).toEqual({
       enabled: false,

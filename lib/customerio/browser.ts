@@ -16,11 +16,8 @@ export type BrowserSdkState =
   | { enabled: true; config: BrowserSdkConfig }
   | {
       enabled: false;
-      /**
-       * - no_write_key_eu: the integration does not write a browser key for EU workspaces yet.
-       * - no_write_key:    no key for this US workspace (Data Pipelines not set up, or local dev).
-       */
-      reason: "no_write_key_eu" | "no_write_key";
+      /** No write key: the integration did not add one yet, or local dev. */
+      reason: "no_write_key";
     };
 
 /** Settings and data go to the CDN host of the workspace's region. */
@@ -30,7 +27,7 @@ export function cdnUrlFor(region: CustomerioRegion): string {
 
 export function browserSdkState(config: CustomerioConfig): BrowserSdkState {
   if (!config.cdpWriteKey) {
-    return { enabled: false, reason: config.region === "eu" ? "no_write_key_eu" : "no_write_key" };
+    return { enabled: false, reason: "no_write_key" };
   }
   return {
     enabled: true,

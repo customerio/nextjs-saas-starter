@@ -100,17 +100,11 @@ export default async function StatusPage() {
 
       {!sdk.enabled ? (
         <p className="mt-4 max-w-prose text-sm leading-6 text-muted">
-          {sdk.reason === "no_write_key_eu" ? (
-            "The integration doesn’t add a browser key for EU workspaces yet, so page views, in-app messages, and the inbox are off. Server events and email work as usual."
-          ) : (
-            <>
-              The browser SDK is off because{" "}
-              <code className="text-ink">CUSTOMERIO_CDP_WRITE_KEY</code> isn’t set.{" "}
-              <a href={links.dataPipelines} className="link">
-                Set up a JavaScript source
-              </a>
-            </>
-          )}
+          The browser SDK is off because <code className="text-ink">CUSTOMERIO_CDP_WRITE_KEY</code>{" "}
+          isn’t set.{" "}
+          <a href={links.dataPipelines} className="link">
+            Set up a JavaScript source
+          </a>
         </p>
       ) : null}
 
