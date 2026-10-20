@@ -5,10 +5,12 @@ import { ButtonLink } from "@/components/button";
 import { ProductPreview } from "@/components/marketing/product-preview";
 import { MarketingHeader, PoweredBy } from "@/components/site-chrome";
 import { AcmeMark } from "@/components/logo";
+import { isDemo } from "@/lib/demo";
 import { visitorNotice } from "@/lib/flows/owner";
 import { loadReadiness } from "@/lib/readiness-server";
 import { getSession } from "@/lib/session";
 
+import { TryDemo } from "./demo/try-demo";
 import { LinkForm } from "./sign-in/link-form";
 
 const iconProps = {
@@ -98,6 +100,8 @@ export default async function Home() {
                   Go to your dashboard
                 </ButtonLink>
               </div>
+            ) : isDemo() ? (
+              <TryDemo centered />
             ) : (
               <LinkForm layout="inline" idPrefix="hero" notice={notice} />
             )}

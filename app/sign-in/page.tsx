@@ -4,10 +4,12 @@ import { redirect } from "next/navigation";
 import { OwnerLogsHint } from "@/components/owner-logs-hint";
 import { AuthShell } from "@/components/site-chrome";
 import { emailNotWorking } from "@/lib/customerio/readiness";
+import { isDemo } from "@/lib/demo";
 import { visitorNotice } from "@/lib/flows/owner";
 import { loadReadiness } from "@/lib/readiness-server";
 import { getSession } from "@/lib/session";
 
+import { TryDemo } from "../demo/try-demo";
 import { LinkForm } from "./link-form";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -17,6 +19,7 @@ const ERRORS: Record<string, string> = {
   Verification: "That link has expired or was already used. Ask for a new one below.",
   AccessDenied: "That sign-in wasn’t allowed. Ask for a new link below.",
   Configuration: "Sign-in isn’t set up correctly on this site.",
+  demo: "This demo doesn’t send sign-in emails. Use Try the demo instead.",
 };
 
 export default async function SignInPage({ searchParams }: PageProps<"/sign-in">) {
@@ -32,13 +35,18 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
   // Only while email can't go out, and the same for every visitor: it never
   // says whether a typed email is the owner's.
   const showOwnerHint = !isDev && emailNotWorking(readiness);
+  const demo = isDemo();
 
   return (
     <AuthShell>
       <h1 className="mt-8 text-[1.625rem] leading-tight font-semibold tracking-[-0.01em]">
         Sign in to Acme
       </h1>
-      <p className="mt-2 text-muted">We’ll email you a link to sign in.</p>
+      <p className="mt-2 text-muted">
+        {demo
+          ? "Look around with a demo account. No email needed."
+          : "We’ll email you a link to sign in."}
+      </p>
 
       {message ? (
         <p role="alert" className="mt-6 flex items-start gap-2 text-sm leading-5 text-danger">
@@ -55,8 +63,14 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
       ) : null}
 
       <div className="mt-8">
-        <LinkForm autoFocus notice={notice} />
-        {showOwnerHint ? <OwnerLogsHint className="mt-1 ps-3.5" /> : null}
+        {demo ? (
+          <TryDemo />
+        ) : (
+          <>
+            <LinkForm autoFocus notice={notice} />
+            {showOwnerHint ? <OwnerLogsHint className="mt-1 ps-3.5" /> : null}
+          </>
+        )}
       </div>
     </AuthShell>
   );

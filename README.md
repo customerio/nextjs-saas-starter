@@ -96,6 +96,10 @@ Other scripts: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm db:generate` (a
 
 How the flows, rules, and code are put together: [docs/how-it-works.md](docs/how-it-works.md).
 
+### Demo mode
+
+`DEMO_MODE=1` is for hosting a public demo of this template. Visitors click **Try the demo** instead of typing an email. It runs without a database: each visitor's projects are kept in a cookie in their own browser, and nothing is sent to Customer.io. Keep it off in your own app. The code is in `lib/demo.ts`, `lib/demo-server.ts`, and `app/demo/`.
+
 ## License
 
 [MIT](LICENSE)

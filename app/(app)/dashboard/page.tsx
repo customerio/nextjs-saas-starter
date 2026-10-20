@@ -5,12 +5,9 @@ import { browserSdkState } from "@/lib/customerio/browser";
 import { emailNotWorking } from "@/lib/customerio/readiness";
 import { getCustomerioConfig } from "@/lib/customerio/config";
 import { getDb } from "@/lib/db";
-import {
-  listProjects,
-  readOnboarding,
-  type OnboardingRow,
-  type ProjectRow,
-} from "@/lib/db/app-store";
+import { isDemo } from "@/lib/demo";
+import { demoAppStore } from "@/lib/demo-server";
+import { dbAppStore, type OnboardingRow, type ProjectRow } from "@/lib/db/app-store";
 import { checklistView } from "@/lib/flows/onboarding";
 import { ownerAccessFor } from "@/lib/owner-server";
 import { loadReadiness } from "@/lib/readiness-server";
@@ -32,10 +29,10 @@ async function loadAppData(
   userId: string,
 ): Promise<{ ok: true; projects: ProjectRow[]; onboarding: OnboardingRow | null } | { ok: false }> {
   try {
-    const db = getDb();
+    const store = isDemo() ? await demoAppStore() : dbAppStore(getDb());
     const [projects, onboarding] = await Promise.all([
-      listProjects(db, userId),
-      readOnboarding(db, userId),
+      store.listProjects(userId),
+      store.readOnboarding(userId),
     ]);
     return { ok: true, projects, onboarding };
   } catch (error) {
@@ -64,7 +61,9 @@ export default async function DashboardPage() {
   return (
     <>
       <h1 className="text-title font-semibold">
-        {signedUpRecently(signup?.signedUpAt ?? null) ? `Welcome to ${site.name}` : "Welcome back"}
+        {isDemo() || signedUpRecently(signup?.signedUpAt ?? null)
+          ? `Welcome to ${site.name}`
+          : "Welcome back"}
       </h1>
       <p className="mt-1.5 text-muted">{user.email}</p>
 

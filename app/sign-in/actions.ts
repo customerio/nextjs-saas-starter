@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { signIn } from "@/auth";
 import { hasDatabase } from "@/lib/db";
+import { isDemo } from "@/lib/demo";
 
 export interface LinkFormState {
   error: string | null;
@@ -24,6 +25,7 @@ export async function requestLink(
   // worked so the bot learns nothing, and send nothing.
   if (String(formData.get("website") ?? "") !== "") redirect("/check-email");
 
+  if (isDemo()) return { error: "This demo doesn’t send sign-in emails.", email };
   if (!EMAIL.test(email) || email.length > 254) {
     return { error: "Enter your full email address, like ada@example.com.", email };
   }

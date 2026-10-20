@@ -152,3 +152,32 @@ export async function dismissOnboarding(db: Db, userId: string, now: Date): Prom
     .set({ dismissedAt: sql`coalesce(${onboarding.dismissedAt}, ${now})` })
     .where(eq(onboarding.userId, userId));
 }
+
+// --- The store the flows use --------------------------------------------------
+
+/**
+ * The queries above, bound to one database. Flows take this (as
+ * `deps.store`) instead of calling the queries directly, so demo mode can
+ * swap in a store that keeps the data in a cookie (lib/demo.ts).
+ */
+export interface AppStore {
+  listProjects(userId: string): Promise<ProjectRow[]>;
+  insertProject(userId: string, name: string, now: Date): Promise<ProjectRow>;
+  removeProject(userId: string, id: string): Promise<ProjectRow | null>;
+  readOnboarding(userId: string): Promise<OnboardingRow | null>;
+  markStep(userId: string, step: OnboardingStep, now: Date): Promise<boolean>;
+  markComplete(userId: string, steps: readonly OnboardingStep[], now: Date): Promise<boolean>;
+  dismissOnboarding(userId: string, now: Date): Promise<void>;
+}
+
+export function dbAppStore(db: Db): AppStore {
+  return {
+    listProjects: (userId) => listProjects(db, userId),
+    insertProject: (userId, name, now) => insertProject(db, userId, name, now),
+    removeProject: (userId, id) => removeProject(db, userId, id),
+    readOnboarding: (userId) => readOnboarding(db, userId),
+    markStep: (userId, step, now) => markStep(db, userId, step, now),
+    markComplete: (userId, steps, now) => markComplete(db, userId, steps, now),
+    dismissOnboarding: (userId, now) => dismissOnboarding(db, userId, now),
+  };
+}

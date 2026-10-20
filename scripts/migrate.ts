@@ -16,6 +16,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 
 import { directDatabaseUrl } from "../lib/db/env.ts";
+import { isDemo } from "../lib/demo.ts";
 
 // Locally, read .env.local the way `next dev` does. Values already in the
 // environment (on Vercel, or set in your shell) always win.
@@ -26,6 +27,11 @@ if (existsSync(".env.local")) {
 }
 
 const url = directDatabaseUrl();
+
+if (!url && isDemo()) {
+  console.log("[migrate] Demo mode runs without a database, so no migrations ran.");
+  process.exit(0);
+}
 
 if (!url) {
   if (process.env.VERCEL === "1") {

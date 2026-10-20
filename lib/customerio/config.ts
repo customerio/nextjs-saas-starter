@@ -1,5 +1,7 @@
 import "server-only";
 
+import { customerioEnv } from "@/lib/demo";
+
 /**
  * App settings, read from environment variables.
  *
@@ -267,7 +269,7 @@ export function readCustomerioConfig(env: Env = process.env): CustomerioConfig {
 /** The config for this server process. Env vars do not change at runtime. */
 let cached: CustomerioConfig | undefined;
 export function getCustomerioConfig(): CustomerioConfig {
-  cached ??= readCustomerioConfig();
+  cached ??= readCustomerioConfig(customerioEnv());
   return cached;
 }
 

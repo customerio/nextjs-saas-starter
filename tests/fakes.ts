@@ -2,6 +2,7 @@ import { CustomerIORequestError, type SendEmailRequest } from "customerio-node";
 import { vi } from "vitest";
 
 import { readCustomerioConfig } from "@/lib/customerio/config";
+import { dbAppStore } from "@/lib/db/app-store";
 import type { Db } from "@/lib/db/store";
 import type { FlowDeps } from "@/lib/flows/deps";
 
@@ -48,6 +49,7 @@ export function fakeDeps(
   let clock = new Date("2026-10-19T12:00:00Z");
   const deps: FlowDeps = {
     db,
+    store: dbAppStore(db),
     config,
     track: config.track ? track : null,
     app: config.appApiKey ? app : null,

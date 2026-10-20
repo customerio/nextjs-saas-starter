@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { browserSdkState } from "@/lib/customerio/browser";
 import { getCustomerioConfig } from "@/lib/customerio/config";
-import { dismissOnboarding } from "@/lib/db/app-store";
+import { isDemo } from "@/lib/demo";
+import { demoDeps } from "@/lib/demo-server";
 import { defaultDeps } from "@/lib/flows/default-deps";
 import { completeStep } from "@/lib/flows/onboarding";
 import {
@@ -26,6 +27,9 @@ async function currentUserId(): Promise<string | null> {
   return session?.user?.id ?? null;
 }
 
+/** The demo keeps its data in a cookie instead of the database (lib/demo.ts). */
+const deps = () => (isDemo() ? demoDeps() : Promise.resolve(defaultDeps()));
+
 const inboxAvailable = () => browserSdkState(getCustomerioConfig()).enabled;
 
 export type FormState = { status: "idle" | "done" } | { status: "error"; message: string };
@@ -37,7 +41,7 @@ export async function createProjectAction(
   const userId = await currentUserId();
   if (!userId) return { status: "error", message: "Your session ended. Sign in again." };
 
-  const result = await createProject(defaultDeps(), {
+  const result = await createProject(await deps(), {
     userId,
     name: String(formData.get("name") ?? ""),
     inboxAvailable: inboxAvailable(),
@@ -58,7 +62,7 @@ export async function createProjectAction(
 export async function deleteProjectAction(formData: FormData): Promise<void> {
   const userId = await currentUserId();
   if (!userId) return;
-  await deleteProject(defaultDeps(), { userId, projectId: String(formData.get("id") ?? "") });
+  await deleteProject(await deps(), { userId, projectId: String(formData.get("id") ?? "") });
   revalidatePath("/dashboard");
 }
 
@@ -69,7 +73,7 @@ export async function inviteTeammateAction(
   const userId = await currentUserId();
   if (!userId) return { status: "error", message: "Your session ended. Sign in again." };
 
-  const result = await inviteTeammate(defaultDeps(), {
+  const result = await inviteTeammate(await deps(), {
     userId,
     email: String(formData.get("email") ?? ""),
     inboxAvailable: inboxAvailable(),
@@ -84,13 +88,13 @@ export async function inviteTeammateAction(
 export async function inboxOpenedAction(): Promise<void> {
   const userId = await currentUserId();
   if (!userId) return;
-  await completeStep(defaultDeps(), userId, "open_inbox", inboxAvailable());
+  await completeStep(await deps(), userId, "open_inbox", inboxAvailable());
   revalidatePath("/dashboard");
 }
 
 export async function dismissChecklistAction(): Promise<void> {
   const userId = await currentUserId();
   if (!userId) return;
-  await dismissOnboarding(defaultDeps().db, userId, new Date());
+  await (await deps()).store.dismissOnboarding(userId, new Date());
   revalidatePath("/dashboard");
 }

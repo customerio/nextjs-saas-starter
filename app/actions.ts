@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getCustomerioConfig } from "@/lib/customerio/config";
 import { isEmailSetupFailure } from "@/lib/customerio/errors";
 import { readEmailStatus } from "@/lib/db/store";
+import { isDemo } from "@/lib/demo";
 import { defaultDeps } from "@/lib/flows/default-deps";
 import { ownerAccess } from "@/lib/flows/owner";
 import { checkEmailAgain } from "@/lib/flows/signup";
@@ -21,6 +22,7 @@ export type CheckAgainState =
 
 /** "Check again" on the status page. Owner only. See `checkEmailAgain` for what it sends. */
 export async function checkAgainAction(): Promise<CheckAgainState> {
+  if (isDemo()) return { status: "not_allowed" };
   const session = await getSession();
   const user = session?.user;
   const access = ownerAccess({

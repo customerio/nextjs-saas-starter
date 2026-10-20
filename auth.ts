@@ -5,6 +5,7 @@ import { cookies, headers } from "next/headers";
 
 import { getDb } from "@/lib/db";
 import { accounts, sessions, users, verificationTokens } from "@/lib/db/schema";
+import { demoSignInRefusal } from "@/lib/demo";
 import { defaultDeps } from "@/lib/flows/default-deps";
 import { handleLinkRequest } from "@/lib/flows/link-request";
 import { writeLinkRequestCookie } from "@/lib/flows/link-request-cookie";
@@ -70,6 +71,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
      * for the form and for anyone posting to /api/auth directly.
      */
     async signIn({ user, email }) {
+      // The public demo never sends email, so no email sign-in at all.
+      const demoRefusal = demoSignInRefusal();
+      if (demoRefusal) return demoRefusal;
       if (!email?.verificationRequest || !user.email) return true;
       const decision = await checkLinkRequest(
         getDb(),

@@ -6,6 +6,7 @@ import {
   type Readiness,
   type SetupStepState,
 } from "@/lib/customerio/readiness";
+import { isDemo } from "@/lib/demo";
 import { links, workspaceUrl } from "@/lib/links";
 
 import { CheckAgain } from "./check-again";
@@ -139,7 +140,12 @@ export function EmailSetup({
   }
 
   const recipient = config.ownerEmail ?? signedInEmail;
-  const checkAgain = (
+  const checkAgain = isDemo() ? (
+    <p className="border-t border-line px-5 py-4 text-sm leading-6 text-muted sm:px-6">
+      In your own app, <span className="text-ink">Check again</span> sends you one test email. The
+      demo sends nothing.
+    </p>
+  ) : (
     <div className="border-t border-line px-5 py-4 sm:px-6">
       <CheckAgain
         recipientHint={

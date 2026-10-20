@@ -6,6 +6,7 @@ import { EmailSetup } from "@/components/email/email-setup";
 import { SignupTrace } from "@/components/signup-trace";
 import { browserSdkState } from "@/lib/customerio/browser";
 import { describeEnv, getCustomerioConfig, type EnvVarSource } from "@/lib/customerio/config";
+import { isDemo } from "@/lib/demo";
 import { links, workspaceUrl } from "@/lib/links";
 import { ownerAccessFor } from "@/lib/owner-server";
 import { loadReadiness } from "@/lib/readiness-server";
@@ -66,7 +67,7 @@ export default async function StatusPage() {
           {config.ownerEmail}
         </span>
       ) : (
-        <span className="text-faint">Not set (local dev)</span>
+        <span className="text-faint">{isDemo() ? "Not set" : "Not set (local dev)"}</span>
       ),
     },
     { term: "Region", value: config.region === "eu" ? "EU" : "US" },
@@ -86,7 +87,9 @@ export default async function StatusPage() {
     <>
       <h1 className="text-title font-semibold">Status</h1>
       <p className="mt-1.5 max-w-prose text-muted">
-        Only you can see this page. It shows which values are set, never the values.
+        {isDemo()
+          ? "In your own app, only you can see this page. This demo shows a new workspace at its first step. Customer.io is off here, so nothing is checked or sent."
+          : "Only you can see this page. It shows which values are set, never the values."}
       </p>
 
       <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-5">

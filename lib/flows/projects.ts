@@ -1,4 +1,4 @@
-import { insertProject, removeProject, type ProjectRow } from "@/lib/db/app-store";
+import type { ProjectRow } from "@/lib/db/app-store";
 
 import { track } from "./app-events";
 import type { FlowDeps } from "./deps";
@@ -18,7 +18,7 @@ export async function createProject(
   if (!name) return { ok: false, error: "empty" };
   if (name.length > NAME_MAX_LENGTH) return { ok: false, error: "too_long" };
 
-  const project = await insertProject(deps.db, input.userId, name, deps.now());
+  const project = await deps.store.insertProject(input.userId, name, deps.now());
   track(deps, input.userId, "project_created", { project_id: project.id, name: project.name });
   await completeStep(deps, input.userId, "create_project", input.inboxAvailable);
   return { ok: true, project };
@@ -29,7 +29,7 @@ export async function deleteProject(
   deps: FlowDeps,
   input: { userId: string; projectId: string },
 ): Promise<boolean> {
-  const removed = await removeProject(deps.db, input.userId, input.projectId);
+  const removed = await deps.store.removeProject(input.userId, input.projectId);
   if (!removed) return false;
   track(deps, input.userId, "project_deleted", { project_id: removed.id, name: removed.name });
   return true;

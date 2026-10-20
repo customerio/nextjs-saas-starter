@@ -5,9 +5,11 @@ import { Button } from "@/components/button";
 import { Inbox } from "@/components/customerio/inbox";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { AcmeLogo } from "@/components/logo";
+import { isDemo } from "@/lib/demo";
 import { ownerAccessFor } from "@/lib/owner-server";
 import { getSession } from "@/lib/session";
 
+import { DemoBanner } from "../demo/demo-banner";
 import { signOutAction } from "./actions";
 import { AppNav } from "./nav";
 
@@ -18,6 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-dvh flex-col">
+      {isDemo() ? <DemoBanner /> : null}
       <header className="sticky top-0 z-10 bg-canvas/85 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-1 px-2 py-1.5 sm:gap-6 sm:px-6">
           <Link

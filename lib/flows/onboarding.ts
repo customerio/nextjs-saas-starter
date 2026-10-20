@@ -1,9 +1,4 @@
-import {
-  markComplete,
-  markStep,
-  type OnboardingRow,
-  type OnboardingStep,
-} from "@/lib/db/app-store";
+import type { OnboardingRow, OnboardingStep } from "@/lib/db/app-store";
 
 import { track } from "./app-events";
 import type { FlowDeps } from "./deps";
@@ -26,9 +21,9 @@ export async function completeStep(
   inboxAvailable: boolean,
 ): Promise<void> {
   const now = deps.now();
-  if (!(await markStep(deps.db, userId, step, now))) return;
+  if (!(await deps.store.markStep(userId, step, now))) return;
   track(deps, userId, "onboarding_step_completed", { step });
-  if (await markComplete(deps.db, userId, requiredSteps(inboxAvailable), now)) {
+  if (await deps.store.markComplete(userId, requiredSteps(inboxAvailable), now)) {
     track(deps, userId, "onboarding_completed");
   }
 }

@@ -5,14 +5,18 @@ import { after } from "next/server";
 import { createAppClient, createTrackClient } from "@/lib/customerio/clients";
 import { getCustomerioConfig } from "@/lib/customerio/config";
 import { getDb } from "@/lib/db";
+import { dbAppStore } from "@/lib/db/app-store";
 import { site, siteUrl } from "@/lib/site";
 
 import type { FlowDeps } from "./deps";
 
-export function defaultDeps(): FlowDeps {
+/** `storage` replaces the database in demo mode (lib/demo-server.ts). */
+export function defaultDeps(storage?: Pick<FlowDeps, "db" | "store">): FlowDeps {
   const config = getCustomerioConfig();
+  const db = storage?.db ?? getDb();
   return {
-    db: getDb(),
+    db,
+    store: storage?.store ?? dbAppStore(db),
     config,
     track: createTrackClient(config),
     app: createAppClient(config),

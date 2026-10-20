@@ -1,6 +1,7 @@
 import type { CustomerioConfig } from "@/lib/customerio/config";
 import type { Mailer } from "@/lib/customerio/send";
 import type { Tracker } from "@/lib/customerio/track";
+import type { AppStore } from "@/lib/db/app-store";
 import type { Db } from "@/lib/db/store";
 
 /**
@@ -9,6 +10,8 @@ import type { Db } from "@/lib/db/store";
  */
 export interface FlowDeps {
   db: Db;
+  /** Projects and the "Get started" checklist. The database, except in demo mode. */
+  store: AppStore;
   config: CustomerioConfig;
   track: Tracker | null;
   app: Mailer | null;
