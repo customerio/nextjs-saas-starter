@@ -69,23 +69,20 @@ function stepCopy(id: SetupStepId, config: CustomerioConfig, readiness: Readines
 
 /**
  * What stops email from sending, as an ordered checklist, plus "Check again".
- * Renders nothing once email works.
+ * Owner only: it lives on the status page. Renders nothing once email works.
  */
 export function EmailSetup({
   readiness,
   config,
-  audience,
   signedInEmail,
 }: {
   readiness: Readiness;
   config: CustomerioConfig;
-  /** "visitor" on the sign-in page, "owner" on the status page. */
-  audience: "visitor" | "owner";
   signedInEmail: string | null;
 }) {
   if (readiness.kind === "ready" || readiness.kind === "unknown") return null;
 
-  const headingId = `email-setup-${audience}`;
+  const headingId = "email-setup";
 
   if (readiness.kind === "no_app_key") {
     return (
@@ -99,9 +96,7 @@ export function EmailSetup({
         <p className="mt-1.5 max-w-prose text-sm leading-6 text-muted">
           <code className="text-ink">CUSTOMERIO_APP_API_KEY</code> is not set here. The Customer.io
           integration adds it to Production and Preview only.
-          {audience === "visitor"
-            ? " Running locally? Your sign-in link prints in the terminal that runs pnpm dev."
-            : " In local dev, sign-in links print in the terminal instead."}
+          {" In local dev, sign-in links print in the terminal instead."}
         </p>
       </section>
     );
@@ -146,12 +141,11 @@ export function EmailSetup({
           >
             <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm.75 3.25v3.69l2.28 2.28-1.06 1.06-2.72-2.72V4.75h1.5Z" />
           </svg>
-          {audience === "visitor" ? "Sign-in emails can’t go out yet" : "Email isn’t sending yet"}
+          Email isn’t sending yet
         </h2>
         <p className="mt-1 max-w-prose text-sm leading-6 text-muted">
-          {audience === "visitor"
-            ? "This site is new and its email setup isn’t finished. You can still ask for a link; we’ll save your email."
-            : "New Customer.io workspaces start this way. Sign-ups are still recorded. Finish these steps and email starts on its own."}
+          New Customer.io workspaces start this way. Sign-ups are still recorded. Finish these steps
+          and email starts on its own.
         </p>
       </div>
 

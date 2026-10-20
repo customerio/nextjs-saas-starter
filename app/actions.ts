@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getCustomerioConfig } from "@/lib/customerio/config";
 import { isEmailSetupFailure } from "@/lib/customerio/errors";
 import { readEmailStatus } from "@/lib/db/store";
 import { defaultDeps } from "@/lib/flows/default-deps";
+import { ownerAccess } from "@/lib/flows/owner";
 import { checkEmailAgain } from "@/lib/flows/signup";
 import { getSession } from "@/lib/session";
 
@@ -14,17 +16,24 @@ export type CheckAgainState =
   | { status: "still_blocked" }
   | { status: "error"; message: string }
   | { status: "too_soon" }
-  | { status: "no_recipient" };
+  | { status: "no_recipient" }
+  | { status: "not_allowed" };
 
-/** "Check again" on the email setup panel. See `checkEmailAgain` for what it sends. */
+/** "Check again" on the status page. Owner only. See `checkEmailAgain` for what it sends. */
 export async function checkAgainAction(): Promise<CheckAgainState> {
-  const deps = defaultDeps();
   const session = await getSession();
   const user = session?.user;
-  const stored = await readEmailStatus(deps.db);
+  const access = ownerAccess({
+    ownerEmail: getCustomerioConfig().ownerEmail,
+    signedInEmail: user?.email,
+    isDev: process.env.NODE_ENV === "development",
+  });
+  if (access !== "owner" || !user?.id || !user.email) return { status: "not_allowed" };
 
+  const deps = defaultDeps();
+  const stored = await readEmailStatus(deps.db);
   const outcome = await checkEmailAgain(deps, {
-    signedInUser: user?.id && user.email ? { id: user.id, email: user.email } : null,
+    signedInUser: { id: user.id, email: user.email },
     lastCheckedAt: stored?.checkedAt ?? null,
   });
   revalidatePath("/", "layout");

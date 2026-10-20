@@ -11,6 +11,7 @@ const MESSAGES: Record<Exclude<CheckAgainState["status"], "idle">, string> = {
   too_soon: "Checked a few seconds ago. Try again in half a minute.",
   no_recipient: "Set OWNER_EMAIL so there is someone to send the test email to.",
   error: "Customer.io did not accept the test email.",
+  not_allowed: "Only the owner can run this check.",
 };
 
 /**

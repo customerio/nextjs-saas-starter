@@ -8,11 +8,22 @@
  *
  *   pnpm db:migrate
  */
+import { existsSync, readFileSync } from "node:fs";
+import { parseEnv } from "node:util";
+
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 
 import { directDatabaseUrl } from "../lib/db/env.ts";
+
+// Locally, read .env.local the way `next dev` does. Values already in the
+// environment (on Vercel, or set in your shell) always win.
+if (existsSync(".env.local")) {
+  for (const [key, value] of Object.entries(parseEnv(readFileSync(".env.local", "utf8")))) {
+    process.env[key] ??= value;
+  }
+}
 
 const url = directDatabaseUrl();
 
