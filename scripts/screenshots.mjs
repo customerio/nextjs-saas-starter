@@ -1,5 +1,5 @@
 /**
- * Takes screenshots of every page, light and dark, desktop and phone, by
+ * Takes screenshots of every page, desktop and phone, by
  * walking the real flow. It never calls Customer.io:
  *
  * - the server must run with the fake (scripts/fake-customerio.mjs) loaded,
@@ -151,7 +151,7 @@ const resetTables = () =>
 await mkdir(OUT, { recursive: true });
 const browser = await chromium.launch();
 
-for (const scheme of ["light", "dark"]) {
+for (const scheme of ["light"]) {
   for (const [device, viewport] of Object.entries(VIEWPORTS)) {
     const suffix = `${device}-${scheme}`;
     const context = await browser.newContext({

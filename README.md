@@ -201,7 +201,7 @@ pnpm db:migrate    # apply migrations
 pnpm lint          # ESLint
 pnpm typecheck     # TypeScript
 pnpm test          # unit tests (Vitest, with an in-memory Postgres)
-pnpm screenshots   # every page, light and dark, desktop and phone
+pnpm screenshots   # every page, desktop and phone
 ```
 
 ## Make it yours
