@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { readCustomerioConfig } from "./config";
-import { readiness, setupChecklist, statusAfterSend, type StoredEmailStatus } from "./readiness";
+import {
+  emailNotWorking,
+  readiness,
+  setupChecklist,
+  statusAfterSend,
+  type StoredEmailStatus,
+} from "./readiness";
 import type { StepResult } from "./steps";
 
 const config = readCustomerioConfig({ CUSTOMERIO_APP_API_KEY: "app-key" });
@@ -90,10 +96,11 @@ describe("readiness", () => {
     ].map((update) => readiness(config, { ...update!, checkedAt: at }));
 
     expect(states.map((state) => setupChecklist(state).map((step) => step.state))).toEqual([
-      ["current", "waiting", "waiting"],
-      ["done", "current", "waiting"],
-      ["done", "done", "current"],
-      ["done", "done", "done"],
+      ["current", "waiting", "waiting", "waiting"],
+      ["done", "current", "waiting", "waiting"],
+      ["done", "done", "current", "waiting"],
+      // Test mode can't be seen with a send-only key: never "done".
+      ["done", "done", "done", "cant_check"],
     ]);
   });
 });
@@ -101,6 +108,7 @@ describe("readiness", () => {
 describe("setupChecklist", () => {
   it("is all unknown before anything was sent", () => {
     expect(setupChecklist({ kind: "unknown" }).map((step) => step.state)).toEqual([
+      "unknown",
       "unknown",
       "unknown",
       "unknown",
@@ -112,14 +120,21 @@ describe("setupChecklist", () => {
       "confirm_owner_email",
       "account_approval",
       "sending_domain",
+      "test_mode",
     ]);
   });
 
-  it("shows the first two as done for a Do Not Send workspace", () => {
+  it("reads Do Not Send as an account that isn't active, not as a setup step", () => {
     const value = readiness(config, {
       ...statusAfterSend(failed("delivery_disabled"))!,
       checkedAt: at,
     });
-    expect(setupChecklist(value).map((step) => step.state)).toEqual(["done", "done", "unknown"]);
+    expect(value).toMatchObject({ kind: "suspended" });
+    expect(emailNotWorking(value)).toBe(true);
+  });
+
+  it("flips from suspended back to ready after one good send", () => {
+    const update = statusAfterSend({ status: "done", detail: null })!;
+    expect(readiness(config, { ...update, checkedAt: at }).kind).toBe("ready");
   });
 });

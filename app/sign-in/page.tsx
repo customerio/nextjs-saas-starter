@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AuthShell } from "@/components/site-chrome";
+import { emailNotWorking } from "@/lib/customerio/readiness";
 import { visitorNotice } from "@/lib/flows/owner";
 import { loadReadiness } from "@/lib/readiness-server";
 import { getSession } from "@/lib/session";
@@ -30,7 +31,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
   const notice = visitorNotice(readiness, isDev);
   // Only while email can't go out, and the same for every visitor: it never
   // says whether a typed email is the owner's.
-  const showOwnerHint = !isDev && (readiness.kind === "blocked" || readiness.kind === "no_app_key");
+  const showOwnerHint = !isDev && emailNotWorking(readiness);
 
   return (
     <AuthShell>

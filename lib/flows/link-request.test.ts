@@ -5,7 +5,10 @@ import type { Db } from "@/lib/db/store";
 import { edgeError, FULL_ENV, fakeDeps, NOT_APPROVED } from "@/tests/fakes";
 import { setupTestDb } from "@/tests/db";
 
+import { readiness } from "@/lib/customerio/readiness";
+
 import { handleLinkRequest, OWNER_LINK_LOG_PREFIX } from "./link-request";
+import { visitorNotice } from "./owner";
 import { handleSignIn } from "./signup";
 
 const URL = "https://acme.test/api/auth/callback/email?token=abc&email=ada%40example.com";
@@ -223,5 +226,29 @@ describe("the owner's sign-in link in the server log", () => {
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain("(dev only)");
     expect(lines[0]).not.toContain(OWNER_LINK_LOG_PREFIX);
+  });
+});
+
+describe("an account that isn't active (403 Do Not Send)", () => {
+  const DO_NOT_SEND = 'Workspace is set to "Do Not Send" in account workspace settings.';
+
+  it("is stored as suspended, never blocks the request, and still logs the owner's link", async () => {
+    const env = { ...FULL_ENV, CUSTOMERIO_OWNER_EMAIL: "owner@acme.test" };
+    const { deps, app } = fakeDeps(db, env, { vercelEnv: "production" });
+    app.sendEmail.mockRejectedValue(edgeError(403, DO_NOT_SEND));
+
+    const outcome = await handleLinkRequest(deps, request("owner@acme.test"));
+    expect(outcome.delivery).toBe("waiting");
+    const stored = await readEmailStatus(db);
+    expect(stored).toMatchObject({ state: "blocked", reason: "delivery_disabled" });
+    expect(readiness(deps.config, stored).kind).toBe("suspended");
+    expect(visitorNotice(readiness(deps.config, stored), false)).toBe(
+      "Sign-in emails aren’t on yet. Try again soon.",
+    );
+    expect(
+      (deps.log.warn as unknown as { mock: { calls: unknown[][] } }).mock.calls
+        .flat()
+        .some((line) => String(line).startsWith(OWNER_LINK_LOG_PREFIX)),
+    ).toBe(true);
   });
 });

@@ -24,7 +24,10 @@ export function ownerAccess(input: {
  * out. No setup details: those are for the owner, on the status page.
  */
 export function visitorNotice(readiness: Readiness, isDev: boolean): string | null {
-  if (readiness.kind === "blocked") return "Sign-in emails aren’t on yet. Try again soon.";
+  // Blocked by setup, or the account isn't active: visitors get the same calm line.
+  if (readiness.kind === "blocked" || readiness.kind === "suspended") {
+    return "Sign-in emails aren’t on yet. Try again soon.";
+  }
   if (readiness.kind === "no_app_key") {
     return isDev
       ? "Running locally: your sign-in link prints in the terminal."

@@ -58,17 +58,21 @@ export const SETUP_STEPS: readonly { id: SetupStepId; kinds: readonly FailureKin
 ];
 
 /**
- * - done:     Customer.io got past this check.
- * - current:  this is the check that stopped the last send.
- * - waiting:  Customer.io has not looked at it yet, because an earlier check is open.
- * - unknown:  we have not sent anything yet, so we do not know.
+ * - done:       Customer.io got past this check.
+ * - current:    this is the check that stopped the last send.
+ * - waiting:    Customer.io has not looked at it yet, because an earlier check is open.
+ * - unknown:    we have not sent anything yet, so we do not know.
+ * - cant_check: the app can't see this from here (test mode). Shown as neutral.
  */
-export type SetupStepState = "done" | "current" | "waiting" | "unknown";
+export type SetupStepState = "done" | "current" | "waiting" | "unknown" | "cant_check";
+
+/** The checklist rows: the three checks above, then test mode. */
+export type ChecklistStepId = SetupStepId | "test_mode";
 
 export type Readiness =
-  /** The last send worked. */
+  /** The last send worked. (Test mode can still limit who gets it; see the checklist.) */
   | { kind: "ready"; checkedAt: Date }
-  /** The last send hit a setup error. */
+  /** The last send hit one of the three setup checks. */
   | {
       kind: "blocked";
       reason: FailureKind;
@@ -76,6 +80,11 @@ export type Readiness =
       httpStatus: number | null;
       checkedAt: Date;
     }
+  /**
+   * 403 "Do Not Send": the account isn't active (trial ended, suspended,
+   * cancelled), or someone set the workspace to "Never send messages".
+   */
+  | { kind: "suspended"; message: string | null; checkedAt: Date }
   /** No App API key, so the app cannot send at all. Normal in local dev. */
   | { kind: "no_app_key" }
   /** Nothing sent yet. The first sign-in link will tell us. */
@@ -89,14 +98,15 @@ export interface StoredEmailStatus {
   checkedAt: Date;
 }
 
-const SETUP_KINDS = new Set<string>(
-  SETUP_STEPS.flatMap((step) => step.kinds).concat("delivery_disabled"),
-);
+const SETUP_KINDS = new Set<string>(SETUP_STEPS.flatMap((step) => step.kinds));
 
 export function readiness(config: CustomerioConfig, stored: StoredEmailStatus | null): Readiness {
   if (!config.appApiKey) return { kind: "no_app_key" };
   if (!stored) return { kind: "unknown" };
   if (stored.state === "ready") return { kind: "ready", checkedAt: stored.checkedAt };
+  if (stored.reason === "delivery_disabled") {
+    return { kind: "suspended", message: stored.message, checkedAt: stored.checkedAt };
+  }
   if (stored.reason && SETUP_KINDS.has(stored.reason)) {
     return {
       kind: "blocked",
@@ -114,24 +124,40 @@ export function isReady(value: Readiness): boolean {
   return value.kind === "ready";
 }
 
-/** The state of each of the three checks, for the checklist. */
-export function setupChecklist(value: Readiness): { id: SetupStepId; state: SetupStepState }[] {
-  if (value.kind === "ready") return SETUP_STEPS.map(({ id }) => ({ id, state: "done" }));
-  if (value.kind !== "blocked") return SETUP_STEPS.map(({ id }) => ({ id, state: "unknown" }));
+/** True when sign-in emails can't go out right now (public pages show one calm line). */
+export function emailNotWorking(value: Readiness): boolean {
+  return value.kind === "blocked" || value.kind === "suspended" || value.kind === "no_app_key";
+}
 
-  const currentIndex = SETUP_STEPS.findIndex((step) => step.kinds.includes(value.reason));
-  // "Do Not Send" is a workspace setting outside the three checks. Customer.io
-  // checks it after approval, so the first two are done.
-  const index = currentIndex === -1 ? 2 : currentIndex;
-  return SETUP_STEPS.map(({ id }, i) => ({
-    id,
-    state:
-      currentIndex === -1 && i === 2
-        ? "unknown"
-        : i < index
-          ? "done"
-          : i === index
-            ? "current"
-            : "waiting",
-  }));
+/**
+ * The checklist: the three checks in Customer.io's order, then test mode.
+ * Test mode is never "done": a send-only key can't see it, so once the
+ * three checks pass it reads "Can't check from here".
+ */
+export function setupChecklist(value: Readiness): { id: ChecklistStepId; state: SetupStepState }[] {
+  if (value.kind === "ready") {
+    return [
+      ...SETUP_STEPS.map(({ id }) => ({ id, state: "done" as const })),
+      { id: "test_mode", state: "cant_check" },
+    ];
+  }
+  if (value.kind !== "blocked") {
+    return [
+      ...SETUP_STEPS.map(({ id }) => ({ id, state: "unknown" as const })),
+      { id: "test_mode", state: "unknown" },
+    ];
+  }
+
+  const index = Math.max(
+    0,
+    SETUP_STEPS.findIndex((step) => step.kinds.includes(value.reason)),
+  );
+  return [
+    ...SETUP_STEPS.map(({ id }, i) => ({
+      id,
+      state:
+        i < index ? ("done" as const) : i === index ? ("current" as const) : ("waiting" as const),
+    })),
+    { id: "test_mode", state: "waiting" },
+  ];
 }

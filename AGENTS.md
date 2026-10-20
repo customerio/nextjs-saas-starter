@@ -22,6 +22,7 @@ A Next.js SaaS starter: Auth.js email magic links, Neon Postgres (Drizzle), and 
 - Customer.io person ID = `users.id`, never the email.
 - The signup runs once, guarded by `claimSignup()` (an atomic UPDATE). Keep that guard if you change the flow.
 - Every email send goes through `recordSendOutcome()` so email readiness stays current.
+- Readiness only knows what the Transactional API answers: setup errors (blocked), 403 "Do Not Send" (suspended), or success (ready). Test mode, daily caps, content checks, and plan limits happen after a 200 and can't be detected; don't pretend to check them. Never mention or rely on starter domains.
 - The sign-in link may be shown on a page only when `mayRevealLink()` allows it (Vercel Preview, email not sent). Never in Production.
 - Setup details (checklist, DNS steps, "Check again", env var presence) are owner-only: gate with `ownerAccess()` / `ownerAccessFor()`. Public pages show at most `visitorNotice()`.
 - One font family (Figtree via `next/font`), mono only for code. No condensed display faces, no heavy weights.

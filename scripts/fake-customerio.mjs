@@ -11,6 +11,8 @@
  *   owner_unconfirmed   403 "Account owner's email address is not confirmed..."
  *   not_approved        403 "Account is not yet approved for sending..."
  *   no_domain           400 "No "from" address was provided and ..."
+ *   do_not_send         403 "Workspace is set to "Do Not Send"..." (trial ended,
+ *                       account suspended, or "Never send messages")
  *
  * The mode is read on every call, so you can flip it while the app runs.
  * Track API calls (identify, events) always succeed.
@@ -30,6 +32,7 @@ const ANSWERS = {
     403,
     "Account is not yet approved for sending.  Verify your account (https://customer.io/docs/account-verification) to send messages.",
   ],
+  do_not_send: [403, 'Workspace is set to "Do Not Send" in account workspace settings.'],
   no_domain: [
     400,
     'No "from" address was provided and this workspace has no verified sending domain to use as a default. Verify a sending domain (https://customer.io/docs/authentication) or include a "from" address from a verified domain.',

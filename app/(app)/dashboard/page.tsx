@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { browserSdkState } from "@/lib/customerio/browser";
+import { emailNotWorking } from "@/lib/customerio/readiness";
 import { getCustomerioConfig } from "@/lib/customerio/config";
 import { getDb } from "@/lib/db";
 import {
@@ -55,7 +56,7 @@ export default async function DashboardPage() {
     isOwner ? loadReadiness() : Promise.resolve(null),
     loadAppData(user.id),
   ]);
-  const emailBlocked = readiness?.kind === "blocked" || readiness?.kind === "no_app_key";
+  const emailBlocked = readiness !== null && emailNotWorking(readiness);
   const checklist = data.ok
     ? checklistView(data.onboarding, { hasProjects: data.projects.length > 0, inboxAvailable })
     : null;

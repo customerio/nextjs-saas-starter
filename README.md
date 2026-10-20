@@ -127,11 +127,12 @@ It shows email readiness with the setup checklist and **Check again**, whether t
 
 ## Email readiness
 
-A new Customer.io workspace can't send email until three things are done. Customer.io checks them in this order and tells us the first one that is still open:
+A new Customer.io workspace can't send email to real people until four things are done. Customer.io checks the first three in this order and tells us the first one that is still open:
 
 1. **Confirm the account owner's email.** Open the link Customer.io sent when you made the account.
 2. **Get the account approved for sending.** Customer.io reviews new accounts. Fill in your account details in Customer.io to start. See [account verification](https://docs.customer.io/accounts/account-verification/).
 3. **Verify a sending domain.** Add the DNS records Customer.io gives you. See [domain authentication](https://docs.customer.io/messaging/channels/email/deliverability/authentication/). To pick the exact sender, set `CUSTOMERIO_FROM_EMAIL` to an address on that domain.
+4. **Turn off test mode.** New workspaces start in test mode: Customer.io accepts every email, but it only reaches the account owner, from a Customer.io test address. In your workspace settings, under "How do you want to send messages?", pick **Send messages normally**. See [message sending](https://docs.customer.io/accounts/workspaces/overview/#message-sending). The app can't see this setting (its key can only send), so the status page shows this step as "Can't check from here".
 
 The app never asks Customer.io about this directly. Every email it sends is also the check: the answer is stored in one database row (`email_status`). While email is blocked:
 
@@ -141,6 +142,10 @@ The app never asks Customer.io about this directly. Every email it sends is also
 - **The owner can still get in.** On any Vercel deployment, the owner's link goes to the Vercel logs (see [First sign-in after deploying](#first-sign-in-after-deploying)); the sign-in page shows a quiet "Own this site?" line pointing there, the same for every visitor. In local dev, every link prints in your terminal. On a **Preview** deployment, the link also shows on the page with a "Preview only" label (only for the owner, if there is one). Production never shows a link on the page.
 
 **Check again** (on the status page, owner only) sends one short test email to the owner and stores the answer. While email is blocked, nothing arrives. The first time it works, you get one "Email works" note and the checklist goes away. It waits 30 seconds between checks.
+
+**If Customer.io answers "Do Not Send"** (403), the account isn't active: the trial ended, the account was suspended or cancelled, or the workspace is set to "Never send messages". The status page says "Your Customer.io account isn't active" and links to Customer.io and to [how billing works](https://docs.customer.io/accounts/billing/how-we-bill/). Visitors still see only the calm line, sign-in is never blocked, and the owner's link still goes to the logs.
+
+**If emails don't arrive** even though the status page says email works: Customer.io can accept an email and still not deliver it. Test mode, the daily limit for new accounts, content checks, and your plan's monthly limit (or, on pay-as-you-go plans, available funds) all happen after the API says yes, so the app can't see them. Open **Deliveries** in your workspace to see what happened to each email, and see [why messages don't arrive](https://docs.customer.io/messaging/send/automations/troubleshoot/messages-not-sending/).
 
 Once any send works, the state flips to ready by itself. Emails that failed before that (like your own welcome email) are not sent again; the status page shows them as "Not sent".
 

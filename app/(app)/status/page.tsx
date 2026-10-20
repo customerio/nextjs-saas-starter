@@ -20,12 +20,6 @@ const SOURCES: { source: EnvVarSource; title: string }[] = [
   { source: "you", title: "From you" },
 ];
 
-const dateFormat = new Intl.DateTimeFormat("en", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "UTC",
-});
-
 export default async function StatusPage() {
   const session = await getSession();
   const user = session!.user;
@@ -54,6 +48,7 @@ export default async function StatusPage() {
   const email = {
     ready: { label: "Ready", tone: "text-ok" },
     blocked: { label: "Not ready", tone: "text-wait" },
+    suspended: { label: "Account not active", tone: "text-wait" },
     no_app_key: { label: "Off here", tone: "text-faint" },
     unknown: { label: "Not checked yet", tone: "text-muted" },
   }[readiness.kind];
@@ -131,23 +126,13 @@ export default async function StatusPage() {
 
       <div className="mt-10 grid items-start gap-x-12 gap-y-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="grid gap-10">
-          {readiness.kind === "blocked" || readiness.kind === "no_app_key" ? (
-            <EmailSetup readiness={readiness} config={config} signedInEmail={user.email ?? null} />
-          ) : (
+          {readiness.kind === "unknown" ? (
             <p className="text-muted">
-              {readiness.kind === "ready" ? (
-                <>
-                  <span className="font-medium text-ok">Email works.</span> The last send went
-                  through on{" "}
-                  <time dateTime={readiness.checkedAt.toISOString()}>
-                    {dateFormat.format(readiness.checkedAt)} UTC
-                  </time>
-                  .
-                </>
-              ) : (
-                "Nothing has been sent yet. The next sign-in link will show whether this workspace can send."
-              )}
+              Nothing has been sent yet. The next sign-in link will show whether this workspace can
+              send.
             </p>
+          ) : (
+            <EmailSetup readiness={readiness} config={config} signedInEmail={user.email ?? null} />
           )}
 
           <section aria-labelledby="trace">
