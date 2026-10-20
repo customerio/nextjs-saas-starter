@@ -132,6 +132,7 @@ function lastLink() {
 
 async function shoot(page, name) {
   await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(() => window.scrollTo(0, 0));
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
@@ -196,6 +197,20 @@ for (const scheme of ["light", "dark"]) {
     await page.waitForURL("**/dashboard");
     await page.waitForTimeout(800); // the signup steps run after the response
     await page.reload();
+    await shoot(page, `dashboard-empty-${suffix}`);
+
+    // Add a few rows through the real form.
+    for (const name of ["Spring launch", "Team handbook", "Customer research"]) {
+      await page.getByRole("button", { name: /^New / }).first().click();
+      await page.getByRole("textbox", { name: /name$/ }).fill(name);
+      await page.getByRole("button", { name: "Create", exact: true }).click();
+      await page.getByText(name, { exact: true }).waitFor();
+    }
+    await page.getByRole("textbox", { name: "Teammate’s email" }).fill("lin@example.com");
+    await page.getByRole("button", { name: "Invite", exact: true }).click();
+    await page.getByText("Invite noted.").waitFor();
+    await shoot(page, `dashboard-projects-${suffix}`);
+
     await page.getByRole("button", { name: /^Inbox/ }).click();
     await page.getByText("Your workspace is ready").waitFor();
     await shoot(page, `dashboard-inbox-${suffix}`);

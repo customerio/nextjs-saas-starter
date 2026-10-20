@@ -5,6 +5,7 @@ A small SaaS app you can deploy in one click and then make your own. It has:
 - **Email sign-in** with a magic link (Auth.js). No passwords.
 - **A Postgres database** on Neon, added for you when you deploy.
 - **Customer.io** for the messages every SaaS needs on day one: the sign-in email, a welcome email, a note to you when someone signs up, and in-app messages with an inbox.
+- **A small, useful dashboard:** one example resource ("projects", renamed in one line) with create and delete, and a "Get started" checklist. Every action sends a Customer.io event you can build campaigns on.
 
 The app is called **Acme**. That is a placeholder name and logo. Change them in `lib/site.ts` and `components/logo.tsx`.
 
@@ -12,11 +13,11 @@ The app is called **Acme**. That is a placeholder name and logo. Change them in 
 
 **Demo:** `DEMO_URL_PLACEHOLDER`
 
-| Landing page                                       | Sign-in, before email is set up                                              |
-| -------------------------------------------------- | ---------------------------------------------------------------------------- |
-| ![Landing page](docs/screenshots/landing.png)      | ![Sign-in with the email setup list](docs/screenshots/sign-in-not-ready.png) |
-| **Dashboard with the inbox open**                  | **Status page**                                                              |
-| ![Dashboard](docs/screenshots/dashboard-inbox.png) | ![Status page](docs/screenshots/status-not-ready.png)                        |
+| Landing page                                          | Sign-in, before email is set up                                              |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------- |
+| ![Landing page](docs/screenshots/landing.png)         | ![Sign-in with the email setup list](docs/screenshots/sign-in-not-ready.png) |
+| **Dashboard**                                         | **Status page**                                                              |
+| ![Dashboard](docs/screenshots/dashboard-projects.png) | ![Status page](docs/screenshots/status-not-ready.png)                        |
 
 ## Deploy
 
@@ -139,11 +140,44 @@ With `OWNER_EMAIL` set, the app emails you when someone confirms their email ("A
 
 For more than that, use the `signed_up` event instead: in Customer.io, make a [campaign](https://docs.customer.io/messaging/send/automations/overview/) that starts when a person performs `signed_up`, and send yourself an email from it. You can add a welcome series for the person in the same campaign, with no code change.
 
+## Events this app sends
+
+Every event goes to Customer.io from the server with the person's user ID, after the response, so a Customer.io problem never slows or fails what the person did. The pattern is one call in [`lib/flows/app-events.ts`](lib/flows/app-events.ts):
+
+```ts
+track(deps, user.id, "project_created", { project_id: project.id, name: project.name });
+```
+
+| Event                       | When                                                                 | Properties                                                   |
+| --------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `signup_started`            | Someone asks for a sign-in link before they have an account          | none                                                         |
+| `signed_up`                 | They open their first link (once per person)                         | `method: "email"`                                            |
+| `project_created`           | They create one of the example resource                              | `project_id`, `name`                                         |
+| `project_deleted`           | They delete one                                                      | `project_id`, `name`                                         |
+| `teammate_invited`          | They enter a teammate's email in "Get started"                       | `invitee_email`                                              |
+| `onboarding_step_completed` | A "Get started" step is done (once per step)                         | `step`: `create_project`, `open_inbox`, or `invite_teammate` |
+| `onboarding_completed`      | Every step is done (once)                                            | none                                                         |
+| Page views                  | Every route change, from the browser SDK (when the write key is set) | page URL, title                                              |
+
+The person is identified before `signup_started` (`email`, `email_verified: false`) and again at `signed_up` (`email`, `email_verified: true`, `created_at`).
+
+### Campaign ideas
+
+- **Finish signing up:** starts on `signup_started`, waits a day, exits if `signed_up` happens. One email: "Your link expired. Here's a new way in."
+- **Invite your teammate:** starts on `teammate_invited` and sends an email _to the invitee_ (use the `invitee_email` property as the recipient). The template never emails invitees itself, so you own the copy and timing.
+- **First-week nudge:** starts on `signed_up`, waits three days, and sends a tip if `onboarding_completed` has not happened; stop it as soon as it does.
+
 ## Browser SDK, in-app messages, and the inbox
 
 When `CUSTOMERIO_CDP_WRITE_KEY` is set, the app loads [`@customerio/cdp-analytics-browser`](https://docs.customer.io/integrations/data-in/connections/javascript/js-source/) once, with the in-app plugin turned on through the site ID. Send an [in-app message](https://docs.customer.io/messaging/channels/in-app/getting-started/) and it shows in the app. Send an [inbox message](https://docs.customer.io/messaging/channels/in-app/inbox/) and it shows under the bell, with an unread count.
 
 If an ad blocker stops the SDK, the app works the same. The status page says so.
+
+The app has no built-in messages: it shows whatever your workspace sends. To welcome new people inside the app:
+
+1. In Customer.io, make a campaign that starts on `signed_up`.
+2. Add an in-app message. Pick a modal, or choose **Inline** with element ID `dashboard-message` to place it at the top of the dashboard (the slot takes no space until a message arrives).
+3. Send it. It appears the next time the person opens the app. Opening the bell counts for the "Check your inbox" step.
 
 ## EU workspaces
 
@@ -209,7 +243,7 @@ pnpm screenshots   # every page, light and dark, desktop and phone
 - **Name and logo:** `lib/site.ts`, `components/logo.tsx`, `app/icon.svg`.
 - **Colors and themes:** the tokens at the top of `app/globals.css`: light on `:root`, dark under `[data-theme="dark"]`. People pick Light, Dark, or System (the default) from the switcher in the header; the choice is saved in the browser and applied before the page paints (`lib/theme.ts`).
 - **Emails:** edit `lib/customerio/emails.ts`, or design them in Customer.io and set `CUSTOMERIO_MAGIC_LINK_MESSAGE_ID` / `CUSTOMERIO_WELCOME_MESSAGE_ID`. Your message gets `message_data` with `url`, `app_name`, `expires_in_minutes` (sign-in) or `app_name`, `dashboard_url` (welcome).
-- **Your product:** start in `app/(app)/dashboard/page.tsx`.
+- **The example resource:** rename it in `lib/site.ts` (`resource: { singular: "project", plural: "projects" }`) and every label changes. The table stays `projects`; rename it in `lib/db/schema.ts` too if you want, then `pnpm db:generate`. Replace it with your real feature in `app/(app)/dashboard/` and `lib/flows/projects.ts`.
 - **Tables:** add them to `lib/db/schema.ts`, run `pnpm db:generate`, and commit the new file in `drizzle/`.
 - **Fonts:** Figtree, loaded with `next/font` in `app/layout.tsx`.
 

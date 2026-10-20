@@ -132,6 +132,41 @@ export const signups = pgTable("signups", {
   steps: jsonb("steps").$type<Record<string, unknown>>().notNull().default({}),
 });
 
+/**
+ * The app's one example resource. The UI calls it whatever `site.resource`
+ * says (lib/site.ts), so renaming the labels needs no migration. Rename the
+ * table too only if you want the database to match.
+ */
+export const projects = pgTable(
+  "projects",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("projects_user_id_created_at").on(table.userId, table.createdAt)],
+);
+
+/**
+ * The "Get started" checklist, one row per person. Each step's time is set
+ * once (an UPDATE ... WHERE ... IS NULL), so its event is tracked once.
+ */
+export const onboarding = pgTable("onboarding", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdProjectAt: timestamptz("created_project_at"),
+  openedInboxAt: timestamptz("opened_inbox_at"),
+  invitedTeammateAt: timestamptz("invited_teammate_at"),
+  completedAt: timestamptz("completed_at"),
+  dismissedAt: timestamptz("dismissed_at"),
+});
+
 export const schema = {
   users,
   accounts,
@@ -140,4 +175,6 @@ export const schema = {
   emailStatus,
   rateLimitHits,
   signups,
+  projects,
+  onboarding,
 };

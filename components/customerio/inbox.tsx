@@ -3,6 +3,8 @@
 import type { InboxMessage } from "@customerio/cdp-analytics-browser";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { inboxOpenedAction } from "@/app/(app)/dashboard/actions";
+
 import { useCustomerio } from "./browser-sdk";
 
 /**
@@ -91,6 +93,14 @@ export function Inbox() {
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
+
+  // The first open in this page view counts for the "Check your inbox" step.
+  const reported = useRef(false);
+  useEffect(() => {
+    if (!open || reported.current) return;
+    reported.current = true;
+    void inboxOpenedAction();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;

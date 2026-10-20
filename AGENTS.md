@@ -25,6 +25,8 @@ A Next.js SaaS starter: Auth.js email magic links, Neon Postgres (Drizzle), and 
 - The sign-in link may be shown on a page only when `mayRevealLink()` allows it (Vercel Preview, email not sent). Never in Production.
 - Setup details (checklist, DNS steps, "Check again", env var presence) are owner-only: gate with `ownerAccess()` / `ownerAccessFor()`. Public pages show at most `visitorNotice()`.
 - One font family (Figtree via `next/font`), mono only for code. No condensed display faces, no heavy weights.
+- Track user actions with `track()` from `lib/flows/app-events.ts` (runs after the response, never throws). Add new event names to its `AppEvent` type and to the README events table.
+- Resource labels come from `site.resource` in `lib/site.ts`. Keep copy generic: no niche product domain anywhere in the UI.
 - Schema changes: edit `lib/db/schema.ts`, run `pnpm db:generate`, commit the SQL in `drizzle/`.
 
 ### Checks

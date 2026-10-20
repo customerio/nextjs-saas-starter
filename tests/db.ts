@@ -26,7 +26,7 @@ export function setupTestDb(): () => Db {
 
   beforeEach(async () => {
     await db!.execute(
-      "truncate users, accounts, sessions, verification_tokens, email_status, rate_limit_hits, signups cascade",
+      "truncate users, accounts, sessions, verification_tokens, email_status, rate_limit_hits, signups, projects, onboarding cascade",
     );
   });
 
