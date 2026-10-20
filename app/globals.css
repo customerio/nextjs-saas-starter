@@ -34,6 +34,41 @@
   color-scheme: light;
 }
 
+/*
+ * Dark theme. The inline script in app/layout.tsx sets data-theme on <html>
+ * before the first paint, from the saved choice (Light, Dark, or System).
+ */
+[data-theme="dark"] {
+  --canvas: #111315;
+  --surface: #1a1d21;
+  --sunken: #15181b;
+  --ink: #eceded;
+  --muted: #a2a8ae;
+  --faint: #8d949b;
+  --line: #262a2f;
+  --line-strong: #353a41;
+  --primary: #eceded;
+  --primary-hover: #ffffff;
+  --on-primary: #141618;
+  --accent: #e6b52b;
+  --on-accent: #141618;
+  --ok: #5cc795;
+  --wait: #e2b54f;
+  --wait-surface: #221d10;
+  --danger: #ff8a7a;
+  --focus-halo: rgb(236 237 237 / 0.12);
+  --danger-halo: rgb(255 138 122 / 0.16);
+  --raised: 0 0 0 1px #2a2e34;
+  --overlay: 0 0 0 1px #30353b, 0 18px 40px -12px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+/* While the theme changes, no color transitions run (no ragged cascade). */
+.theme-switching,
+.theme-switching * {
+  transition: none !important;
+}
+
 @theme inline {
   --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;

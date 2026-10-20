@@ -1,5 +1,5 @@
 /**
- * Takes screenshots of every page, desktop and phone, by
+ * Takes screenshots of every page, light and dark, desktop and phone, by
  * walking the real flow. It never calls Customer.io:
  *
  * - the server must run with the fake (scripts/fake-customerio.mjs) loaded,
@@ -151,7 +151,7 @@ const resetTables = () =>
 await mkdir(OUT, { recursive: true });
 const browser = await chromium.launch();
 
-for (const scheme of ["light"]) {
+for (const scheme of ["light", "dark"]) {
   for (const [device, viewport] of Object.entries(VIEWPORTS)) {
     const suffix = `${device}-${scheme}`;
     const context = await browser.newContext({
@@ -168,6 +168,17 @@ for (const scheme of ["light"]) {
     await resetTables();
     await page.goto(BASE_URL);
     await shoot(page, `landing-${suffix}`);
+
+    // The theme menu, open. Viewport only: it sits at the top.
+    await page
+      .getByRole("button", { name: /^Theme/ })
+      .first()
+      .click();
+    await page.getByRole("menu", { name: "Theme" }).waitFor();
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({ path: path.join(OUT, `theme-menu-${suffix}.png`) });
+    console.log(path.join(OUT, `theme-menu-${suffix}.png`));
+    await page.keyboard.press("Escape");
 
     // A new workspace: Customer.io has not approved it for sending yet.
     setMode("not_approved");

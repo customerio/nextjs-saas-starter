@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { Button } from "@/components/button";
 import { Inbox } from "@/components/customerio/inbox";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { AcmeLogo } from "@/components/logo";
 import { ownerAccessFor } from "@/lib/owner-server";
 import { getSession } from "@/lib/session";
@@ -28,10 +29,29 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </Link>
           <AppNav showStatus={isOwner} />
           <div className="ms-auto flex items-center gap-1">
+            <ThemeSwitcher />
             <Inbox />
             <form action={signOutAction}>
-              <Button type="submit" variant="quiet">
-                Sign out
+              {/* An icon on phones, so the header fits at 375px. */}
+              <Button
+                type="submit"
+                variant="quiet"
+                aria-label="Sign out"
+                className="size-11 px-0 sm:size-auto sm:px-3"
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  aria-hidden="true"
+                  className="size-5 sm:hidden"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M8 4.25H5.25a1.5 1.5 0 0 0-1.5 1.5v8.5a1.5 1.5 0 0 0 1.5 1.5H8M12 13.5 15.5 10 12 6.5M15.25 10H8" />
+                </svg>
+                <span className="hidden sm:inline">Sign out</span>
               </Button>
             </form>
           </div>

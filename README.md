@@ -201,13 +201,13 @@ pnpm db:migrate    # apply migrations
 pnpm lint          # ESLint
 pnpm typecheck     # TypeScript
 pnpm test          # unit tests (Vitest, with an in-memory Postgres)
-pnpm screenshots   # every page, desktop and phone
+pnpm screenshots   # every page, light and dark, desktop and phone
 ```
 
 ## Make it yours
 
 - **Name and logo:** `lib/site.ts`, `components/logo.tsx`, `app/icon.svg`.
-- **Colors:** the tokens at the top of `app/globals.css`.
+- **Colors and themes:** the tokens at the top of `app/globals.css`: light on `:root`, dark under `[data-theme="dark"]`. People pick Light, Dark, or System (the default) from the switcher in the header; the choice is saved in the browser and applied before the page paints (`lib/theme.ts`).
 - **Emails:** edit `lib/customerio/emails.ts`, or design them in Customer.io and set `CUSTOMERIO_MAGIC_LINK_MESSAGE_ID` / `CUSTOMERIO_WELCOME_MESSAGE_ID`. Your message gets `message_data` with `url`, `app_name`, `expires_in_minutes` (sign-in) or `app_name`, `dashboard_url` (welcome).
 - **Your product:** start in `app/(app)/dashboard/page.tsx`.
 - **Tables:** add them to `lib/db/schema.ts`, run `pnpm db:generate`, and commit the new file in `drizzle/`.

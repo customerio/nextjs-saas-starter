@@ -6,6 +6,7 @@ import { browserSdkState } from "@/lib/customerio/browser";
 import { getCustomerioConfig } from "@/lib/customerio/config";
 import { getSession } from "@/lib/session";
 import { site } from "@/lib/site";
+import { THEME_COLORS, themeScript } from "@/lib/theme";
 
 import "./globals.css";
 
@@ -20,7 +21,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f4f5f2",
+  // The inline theme script updates these to the chosen theme's color.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: THEME_COLORS.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLORS.dark },
+  ],
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -29,7 +34,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const sdk = browserSdkState(getCustomerioConfig());
 
   return (
-    <html lang="en" className={`${figtree.variable} ${geistMono.variable} bg-canvas`}>
+    // suppressHydrationWarning: the theme script sets data-theme on <html>
+    // before React loads, so the server HTML and the page differ there on purpose.
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${figtree.variable} ${geistMono.variable} bg-canvas`}
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-dvh font-sans text-base leading-normal text-ink">
         <a
           href="#main"

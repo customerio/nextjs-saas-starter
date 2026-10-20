@@ -5,6 +5,7 @@ import { links } from "@/lib/links";
 import { site } from "@/lib/site";
 
 import { AcmeLogo, AcmeMark } from "./logo";
+import { ThemeSwitcher } from "./theme-switcher";
 
 export function MarketingHeader({ children }: { children?: ReactNode }) {
   return (
@@ -16,11 +17,14 @@ export function MarketingHeader({ children }: { children?: ReactNode }) {
       >
         <AcmeLogo />
       </Link>
-      {children ? (
-        <nav aria-label="Account" className="flex items-center gap-1">
-          {children}
-        </nav>
-      ) : null}
+      <div className="flex items-center gap-1">
+        <ThemeSwitcher />
+        {children ? (
+          <nav aria-label="Account" className="flex items-center gap-1">
+            {children}
+          </nav>
+        ) : null}
+      </div>
     </header>
   );
 }
@@ -44,7 +48,10 @@ export function PoweredBy() {
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col px-5">
-      <main id="main" className="flex flex-1 flex-col items-center justify-center py-16">
+      <header className="-mx-2 flex justify-end pt-3 sm:-mx-0">
+        <ThemeSwitcher />
+      </header>
+      <main id="main" className="flex flex-1 flex-col items-center justify-center pb-16">
         <div className="w-full max-w-[22.5rem]">
           <Link
             href="/"
